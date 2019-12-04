@@ -2,6 +2,51 @@ import numpy as np
 
 from .funcs import no_nan_inf
 
+def dot_ensemble(lat, lon, radius, num_pts=1e5):
+    """Create an ensemble of dots on a sphere.
+    
+    Method see: 
+    https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+    answered by CR Drost
+    
+    Parameters:
+    -----------
+    lat : float
+        latitude of center of ensemble in rad
+    lon : float
+        longitude of center of ensemble in rad
+    radius : float
+        angular radius of the ensemble in deg
+    num_pts : int 
+        number of points used to generate the
+        full sphere evenly covered with dots
+        in a sunflower shape
+    
+    Return:
+    -------
+    latitudes, longitudes  -  np.arrays of dots
+    that go into the ensemble.
+    """
+    if no_nan_inf([lat, lon, radius, num_pts]) == False:
+        raise ValueError("One of your inputs in dot_ensemble is or contains NaN or Inf.")
+        
+    # This is CR Drost's solution to the sunflower spiral:
+    indices = np.arange(0, num_pts, dtype=float) + 0.5
+    phi = np.arccos(1 - 2 * indices/num_pts) #latitude
+    theta = np.pi * (1 + 5**0.5) * indices #longitue
+    
+    # Fold onto on sphere
+    phi = np.pi / 2 - phi % (2 * np.pi)
+    theta = theta % (np.pi * 2)
+    
+    # Calculate the distance of the dots to the center of the ensemble
+    gcs = great_circle_distance(lat, lon, phi, theta)
+    
+    # If distance is small enough, include in ensemble
+    a = np.where(gcs < (radius * np.pi / 180))[0]
+    
+    return phi[a], theta[a]
+
 def great_circle_distance(a, la, b, lb):
     """Calcultate the angular distance on
     a great circle than runs through two points

@@ -1,7 +1,11 @@
 import pytest
 import numpy as np
 
-from ..model import daylength, on_off, lambert, great_circle_distance
+from ..model import (daylength,
+                     on_off,
+                     lambert,
+                     great_circle_distance,
+                     dot_ensemble)
 
 
 
@@ -68,3 +72,28 @@ cases = [(0, 0, np.pi, 0, np.pi),
 @pytest.mark.parametrize("a,la,b,lb,expected", cases)
 def test_great_circle_distance(a, la, b, lb, expected):
     assert great_circle_distance(a, la, b, lb) == expected
+    
+## ------------- TESTING dot_ensemble(lat, lon, radius, num_pts=1e4)--------------------------       
+    
+def test_dot_ensemble():
+    
+    # Let the ensemble cover half a sphere
+    p, t = dot_ensemble(0, 0, 90, num_pts=1e4)
+    assert len(p) == 4999
+    assert len(p) == len(t)
+    assert (p < np.pi / 2).all()
+    assert (p > -np.pi / 2).all()
+    assert (t < 2 * np.pi).all()
+    assert (t > 0 ).all()
+    
+    # Look at tiny radii producing only one ...
+    p,t = dot_ensemble(0, 0, 1, num_pts=1e4)
+    assert len(p) == 1
+    
+    # or no dots at all.
+    p,t = dot_ensemble(0, 0, .1, num_pts=1e4)
+    assert len(p) == 0
+    
+    # Test one failing case to make sure no_nan_inf is called:
+    with pytest.raises(ValueError) as e:
+        dot_ensemble(0, np.nan, .1, num_pts=1e4)
