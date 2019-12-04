@@ -5,7 +5,8 @@ from ..model import (daylength,
                      on_off,
                      lambert,
                      great_circle_distance,
-                     dot_ensemble)
+                     dot_ensemble,
+                     model)
 
 
 
@@ -97,3 +98,25 @@ def test_dot_ensemble():
     # Test one failing case to make sure no_nan_inf is called:
     with pytest.raises(ValueError) as e:
         dot_ensemble(0, np.nan, .1, num_pts=1e4)
+        
+## ------------- TESTING  model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
+        
+def test_model():
+    
+    # Set up a mock data set:
+    phi = np.linspace(0,np.pi*2, 10)
+    flare = np.full(10,3)*np.arange(10)
+    latitudes = np.array([np.pi/2,np.pi/4,0])
+    longitudes = np.array([0,0,0])
+    inclination = np.pi/2
+    
+    # Calculate the model
+    lamb, onoff, m = model(phi, latitudes, longitudes, flare, inclination,)
+    
+    # Do some checks
+    assert m[0] == 0
+    assert onoff.shape == lamb.shape
+    assert onoff.shape == (3,10)
+    assert (lamb[0]==pytest.approx(0.)) # dot on top
+    assert (lamb[1] * onoff[1] >= 0.).all()
+    assert np.max(m)==m[-1]

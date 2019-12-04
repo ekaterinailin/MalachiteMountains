@@ -2,6 +2,72 @@ import numpy as np
 
 from .funcs import no_nan_inf
 
+def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
+    """Take a flare light curve and a rotating ensemble of latitudes
+    and longitudes, and let it rotate. 
+    
+    Parameters:
+    -----------
+    phi :  N-array
+        longitudes to evaluate the model at in rad
+    latitudes : M-array
+        latitudes of the spot grid points in rad
+    longitudes : M-array
+        longitudes of the spot grid points in rad
+    flare : N-array
+        flare shape
+    inclination : float
+        inclination in rad
+    phi0 : float
+        longitude facing the observer
+        
+    Return:
+    --------
+    lambert modifier for flux - N-array
+    onoff day and night step function - N-array
+    model light curve - N-array
+    """
+    
+    if no_nan_inf([phi, latitudes, longitudes, flare, inclination, phi0]) == False:
+        raise ValueError("One of your inputs in model() is or contains NaN or Inf.")
+    
+    # Calculate the offset:
+    phi_ = phi-phi0
+    
+    # Check if the dimensions of the inputs are right
+    l = len(latitudes)
+    assert l == len(longitudes)
+    assert len(phi_) == len(flare)
+    # -----------------------------------------------
+    
+    # Get daylengths for all grid points 
+    # and calculate day/night switches:
+    Ds = daylength(latitudes, inclination)
+    onoff = np.full((l,phi_.shape[0]),0)
+    
+    for i,d in enumerate(Ds):# How can I avoid this loop?
+        onoff[i,:] = on_off(phi_-longitudes[1], d)
+    #------------------------------------------------
+        
+    # Why isn't it possible to just fill an array here?
+    # Refactor later ...
+    # Anyways: Calculate the lambert modifier:
+    latlon = np.concatenate((latitudes.reshape(l,1),
+                             longitudes.reshape(l,1)),
+                            axis=1)
+    A = []
+    for i, ll in enumerate(latlon):
+        a = lambert(phi_-ll[1], inclination, ll[0])
+        A.append(a)
+    lamb = np.array(A)
+    
+    #--------------------------------------------------
+    
+    # Give intermediate results: lamb, onoff 
+    # Also co-add all grid points and average them 
+    # after folding with flare:
+    return lamb, onoff, np.sum(lamb * onoff, axis=0) * flare / l
+
 def dot_ensemble(lat, lon, radius, num_pts=1e5):
     """Create an ensemble of dots on a sphere.
     
