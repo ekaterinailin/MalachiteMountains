@@ -1,6 +1,10 @@
 import numpy as np
+import pandas as pd
 
 from .funcs import no_nan_inf
+
+import astropy.units as u
+from astropy.constants import c, h, k_B, R_sun, L_sun
 
 def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     """Take a flare light curve and a rotating ensemble of latitudes
@@ -68,7 +72,7 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     # after folding with flare:
     return lamb, onoff, np.sum(lamb * onoff, axis=0) * flare / l
 
-def dot_ensemble(lat, lon, radius, num_pts=1e5):
+def dot_ensemble(lat, lon, radius, num_pts=1e6, s=30):
     """Create an ensemble of dots on a sphere.
     
     Method see: 
@@ -87,6 +91,9 @@ def dot_ensemble(lat, lon, radius, num_pts=1e5):
         number of points used to generate the
         full sphere evenly covered with dots
         in a sunflower shape
+    s : int
+        s^2 points are generated if the patch is small
+        enough to count as planar
     
     Return:
     -------
@@ -96,21 +103,36 @@ def dot_ensemble(lat, lon, radius, num_pts=1e5):
     if no_nan_inf([lat, lon, radius, num_pts]) == False:
         raise ValueError("One of your inputs in dot_ensemble is or contains NaN or Inf.")
         
-    # This is CR Drost's solution to the sunflower spiral:
-    indices = np.arange(0, num_pts, dtype=float) + 0.5
-    phi = np.arccos(1 - 2 * indices/num_pts) #latitude
-    theta = np.pi * (1 + 5**0.5) * indices #longitue
-    
-    # Fold onto on sphere
-    phi = np.pi / 2 - phi % (2 * np.pi)
-    theta = theta % (np.pi * 2)
-    
+    if radius > 1.5:
+        
+        # This is CR Drost's solution to the sunflower spiral:
+        indices = np.arange(0, num_pts, dtype=float) + 0.5
+        phi = np.arccos(1 - 2 * indices/num_pts) #latitude
+        theta = np.pi * (1 + 5**0.5) * indices #longitude
+        
+        # Fold onto on sphere
+        phi = np.pi / 2 - phi % (2 * np.pi)
+        theta = theta % (np.pi * 2)
+        
+    elif radius <= 1.5:
+        
+        r = (radius * 3) / 180 * np.pi 
+        phi = (np.full(s,1).reshape(s,1) * np.linspace(lat-r, lat+r, s).reshape(1,s)).reshape(1, s**2)[0,:]
+        theta = ((np.full(s,1).reshape(1,s) * np.linspace(lon-r, lon+r, s).reshape(s,1))).reshape(1, s**2)[0,:]
+        # Fold onto on sphere
+        phi = phi % (2 * np.pi)
+        theta = theta % (np.pi * 2)
+        
+#     import matplotlib.pyplot as plt
+#     plt.scatter(phi,theta)
+#     plt.scatter([lat],[lon])
+    print(phi.shape)
     # Calculate the distance of the dots to the center of the ensemble
     gcs = great_circle_distance(lat, lon, phi, theta)
     
     # If distance is small enough, include in ensemble
     a = np.where(gcs < (radius * np.pi / 180))[0]
-    
+    print(len(a))
     return phi[a], theta[a]
 
 def great_circle_distance(a, la, b, lb):
@@ -283,3 +305,75 @@ def daylength(l, i, P=1.):
         
         else:
             return formula(l,i) * P
+
+
+
+def black_body_spectrum(wav,t):
+    """Takes an array of wavelengths and
+    a temperature and produces an array
+    of fluxes from a thermal spectrum
+    
+    Parameters:
+    -----------
+    wav : Astropy array
+        wavenlength array
+    t : float
+        effective temperature in Kelvin
+    """
+    t = t * u.K # set unit to Kelvin
+    
+    return (( (2 * np.pi * h * c**2) / (wav**5) / (np.exp( (h * c) / (wav * k_B * t) ) - 1)) 
+            .to("erg/s/cm**3")) #simplify the units
+
+
+def calculate_relative_flare_area(dist, rad, qflux, amp, mission, flaret=1e4):
+    """Get the flare area in rel. unit
+    
+    Parameters:
+    -----------
+    dist : float
+        distance to target in parsecs
+    rad : float
+        radius in solar radii
+    qflux : float
+        quiescent flux in erg/s/cm^2
+    amp : float
+        (0,inf) flare amplitude in rel. flux
+    mission : string
+        TESS or Kepler
+    flaret : float
+        flare black body temperature, default 10kK
+    """
+    # Give units to everything:
+    dcm = dist * u.pc
+    rcm = rad * R_sun
+    qflux = qflux * u.erg/u.s/u.cm**2
+    
+    # Read in response curve:
+    response_curve_path = {"TESS":"TESS.txt",
+                           "Kepler":"kepler_lowres.txt"}
+    df = pd.read_csv(f"static/{response_curve_path[mission]}",
+                     delimiter="\s+", skiprows=8)
+    df = df.sort_values(by="nm", ascending=True)
+    rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
+    rres = (df.response).values
+    
+    # create an array to upsample the filter curve to
+    w = np.arange(3000,13001) * u.angstrom
+
+    # interpolate thermal spectrum onto response 
+    # curve wavelength array, then sum up
+    # flux times response curve:
+
+    # Generate a thermal spectrum at the flare 
+    # temperature over an array of wavelength w:
+    thermf = black_body_spectrum(w, flaret) 
+    
+    # Interpolate response from rwav to w:
+    rres = np.interp(w,rwav,rres)
+    
+    # Integrating the flux of the thermal 
+    # spectrum times the response curve over wavelength:
+    calflareflux = np.trapz(thermf * rres, x=w)
+    
+    return (((amp * qflux) / (calflareflux)) * (dcm / rcm)**2.).decompose()
