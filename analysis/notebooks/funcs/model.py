@@ -72,7 +72,75 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     # after folding with flare:
     return lamb, onoff, np.sum(lamb * onoff, axis=0) * flare / l
 
-def dot_ensemble(lat, lon, radius, num_pts=1e6, s=30):
+
+
+def dot_ensemble_circular(lat, lon, radius, num_pts=200):
+    """For radii smaller than 5 deg, you can approximate
+    a uniform grid on a sphere by projecting a uniform 
+    grid on a circular surface (sunflower shape).
+    
+    Here we create a grid on a pole and then rotate it
+    around the y- and then around the z- axis to center 
+    it on the latitute and longitude we need.
+    
+    
+    Parameters:
+    ------------
+    lat : float
+        latitude in rad
+    lon : float
+        longutude in rad
+    radius : float
+        radius of the spot in deg
+    num_pts: int
+        number of grid points
+        
+    Return:
+    -------
+    latitudes, longitudes: arrays of floats
+        positions of grid points in rad
+    pos : tuple of arrays of float
+        cartesian coordinates of grid points
+        
+    """
+    if no_nan_inf([lat, lon, radius]) == False:
+        raise ValueError("One of your inputs in "\
+                         "dot_ensemble_circular is"\
+                         " or contains NaN or Inf.")
+    
+    # Create grid as a circle in z=1 plane centered on the z-axis
+    # The grid sits on the pole, that is.
+    lon = -lon
+    indices = np.arange(0, num_pts, dtype=float) + 0.5
+    radius = radius / 180 * np.pi #radius in rad
+    rad = np.tan(radius) # project radius to the unit sphere
+    r = np.sqrt(indices / num_pts) * rad #apply projected radius to grid
+    theta = np.pi * (1 + 5**0.5) * indices #use formula
+    
+    # Now rotate the grid down to the position of the spot
+    
+    # Rotation matrix [R_z(lon) x R_y(pi/2-lat)]
+    cl, sl, ca, sa = np.cos(lon), np.sin(lon), np.cos(lat), np.sin(lat)
+    Mrot = np.array([[cl * sa,   -sl, cl * ca],
+                     [sl * sa,    cl, sl * ca],
+                     [    -ca,    0,      sa]])
+    
+    # Vectors of projected grid dots on the pole (x,y,z)
+    sina, cosa,  = r / np.sqrt(r**2 + 1), np.cos(np.arctan(r))
+    st, ct = np.sin(theta), np.cos(theta)
+    vec = np.array([sina * ct, sina * st, cosa])
+    
+    # Matrix multiplication
+    x,y,z = (Mrot@vec)
+    
+    # Convert cartesian positions back to latitudes and longitudes:
+    lats = np.arcsin(z) 
+    lons = np.arctan2(y, x) 
+    
+    return lats, lons, (x,y,z)
+
+
+def dot_ensemble_spherical(lat, lon, radius, num_pts=5e4):
     """Create an ensemble of dots on a sphere.
     
     Method see: 
@@ -91,9 +159,6 @@ def dot_ensemble(lat, lon, radius, num_pts=1e6, s=30):
         number of points used to generate the
         full sphere evenly covered with dots
         in a sunflower shape
-    s : int
-        s^2 points are generated if the patch is small
-        enough to count as planar
     
     Return:
     -------
@@ -101,38 +166,25 @@ def dot_ensemble(lat, lon, radius, num_pts=1e6, s=30):
     that go into the ensemble.
     """
     if no_nan_inf([lat, lon, radius, num_pts]) == False:
-        raise ValueError("One of your inputs in dot_ensemble is or contains NaN or Inf.")
+        raise ValueError("One of your inputs in "\
+                         "dot_ensemble_spherical is"\
+                         " or contains NaN or Inf.")
+
+    # This is CR Drost's solution to the sunflower spiral:
+    indices = np.arange(0, num_pts, dtype=float) + 0.5
+    phi = np.arccos(1 - 2 * indices/num_pts) #latitude
+    theta = np.pi * (1 + 5**0.5) * indices #longitude
+
+    # Fold onto on sphere
+    phi = np.pi / 2 - phi % (2 * np.pi)
+    theta = theta % (np.pi * 2)
         
-    if radius > 1.5:
         
-        # This is CR Drost's solution to the sunflower spiral:
-        indices = np.arange(0, num_pts, dtype=float) + 0.5
-        phi = np.arccos(1 - 2 * indices/num_pts) #latitude
-        theta = np.pi * (1 + 5**0.5) * indices #longitude
-        
-        # Fold onto on sphere
-        phi = np.pi / 2 - phi % (2 * np.pi)
-        theta = theta % (np.pi * 2)
-        
-    elif radius <= 1.5:
-        
-        r = (radius * 3) / 180 * np.pi 
-        phi = (np.full(s,1).reshape(s,1) * np.linspace(lat-r, lat+r, s).reshape(1,s)).reshape(1, s**2)[0,:]
-        theta = ((np.full(s,1).reshape(1,s) * np.linspace(lon-r, lon+r, s).reshape(s,1))).reshape(1, s**2)[0,:]
-        # Fold onto on sphere
-        phi = phi % (2 * np.pi)
-        theta = theta % (np.pi * 2)
-        
-#     import matplotlib.pyplot as plt
-#     plt.scatter(phi,theta)
-#     plt.scatter([lat],[lon])
-    print(phi.shape)
     # Calculate the distance of the dots to the center of the ensemble
     gcs = great_circle_distance(lat, lon, phi, theta)
     
     # If distance is small enough, include in ensemble
     a = np.where(gcs < (radius * np.pi / 180))[0]
-    print(len(a))
     return phi[a], theta[a]
 
 def great_circle_distance(a, la, b, lb):

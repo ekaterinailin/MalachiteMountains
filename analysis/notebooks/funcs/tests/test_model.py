@@ -5,7 +5,8 @@ from ..model import (daylength,
                      on_off,
                      lambert,
                      great_circle_distance,
-                     dot_ensemble,
+                     dot_ensemble_spherical,
+                     dot_ensemble_circular,
                      model)
 
 
@@ -74,12 +75,45 @@ cases = [(0, 0, np.pi, 0, np.pi),
 def test_great_circle_distance(a, la, b, lb, expected):
     assert great_circle_distance(a, la, b, lb) == expected
     
-## ------------- TESTING dot_ensemble(lat, lon, radius, num_pts=1e4)--------------------------       
     
-def test_dot_ensemble():
+## ------------- TESTING dot_ensemble_circular(lat, lon, radius, num_pts=200)) -----------  
+
+cases = [(0,0,6), (90,0,3), (0,90,3), (-60,-20,4)]
+
+@pytest.mark.parametrize("lat,lon,r", cases)
+def test_dot_ensemble_circular(lat, lon, r):
+    
+    # Call function on the case inputs
+    lats, lons, (x,y,z) = dot_ensemble_circular(lat, lon, r, num_pts=100)
+    
+    # Make sure all arrays have correct length
+    for i in (lats, lons, x, y, z):
+        assert len(i) == 100
+    # Make sure latitudes and longites are within allowed range
+    assert (np.abs(lats) < np.pi/2).all()
+    assert (np.abs(lons) < 2 * np.pi).all()
+
+    # Make sure positions are not outside the sphere
+    for i in (x, y, z):
+        assert (np.abs(i) < 1).all()
+
+    # Actually make sure positions are all ON the sphere
+    assert (x**2 + y**2 + z**2) ==  pytest.approx(1.)
+
+    # Check if error is raise if input is not finite:
+    for case in [(np.nan, lon, r,),
+                 (lat, np.nan, r,),
+                 (lat, lon, np.inf,)]:
+        with pytest.raises(ValueError) as e:
+            dot_ensemble_circular(*case, num_pts=100)
+    
+    
+## ------------- TESTING dot_ensemble_spherical(lat, lon, radius, num_pts=1e4)-------------       
+    
+def test_dot_ensemble_spherical():
     
     # Let the ensemble cover half a sphere
-    p, t = dot_ensemble(0, 0, 90, num_pts=1e4)
+    p, t = dot_ensemble_spherical(0, 0, 90, num_pts=1e4)
     assert len(p) == 4999
     assert len(p) == len(t)
     assert (p < np.pi / 2).all()
@@ -88,16 +122,16 @@ def test_dot_ensemble():
     assert (t > 0 ).all()
     
     # Look at tiny radii producing only one ...
-    p,t = dot_ensemble(0, 0, 1, num_pts=1e4)
+    p,t = dot_ensemble_spherical(0, 0, 1, num_pts=1e4)
     assert len(p) == 1
     
     # or no dots at all.
-    p,t = dot_ensemble(0, 0, .1, num_pts=1e4)
+    p,t = dot_ensemble_spherical(0, 0, .1, num_pts=1e4)
     assert len(p) == 0
     
     # Test one failing case to make sure no_nan_inf is called:
     with pytest.raises(ValueError) as e:
-        dot_ensemble(0, np.nan, .1, num_pts=1e4)
+        dot_ensemble_spherical(0, np.nan, .1, num_pts=1e4)
         
 ## ------------- TESTING  model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
         
