@@ -1,14 +1,73 @@
 import pytest
 import numpy as np
 
+import astropy.units as u
+from astropy.constants import  R_sun
+
 from ..model import (daylength,
                      on_off,
                      lambert,
                      great_circle_distance,
                      dot_ensemble_spherical,
                      dot_ensemble_circular,
+                     calculate_specific_flare_flux,
+                     calculate_angular_radius,
                      model)
 
+# ----------- TESTING calculate_angular_radius(Fth, a, qlum, R, lat, lon, i, phi=0) -------
+
+def test_calculate_angular_radius():
+    # Test unphysical results: flare area > stellar surface
+    with pytest.raises(ValueError) as e:
+        calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 1e30*u.erg/u.s, 
+                                 .1*R_sun, 0, 0, np.pi/2, phi0=0)
+    # Test zero as input
+    assert calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 0*u.erg/u.s, 
+                                    .1*R_sun, 0, 0, np.pi/2, phi0=0) == 0.
+    # Test unit error
+    with pytest.raises(u.UnitConversionError) as e:
+        assert calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 0*u.erg, 
+                                        .1*R_sun, 0, 0, np.pi/2, phi0=0)
+    # Test case where flare must cover a hemisphere
+    assert (calculate_angular_radius(1*u.erg/u.cm**2/u.s, 0.5, 4*np.pi*u.erg/u.s, 
+                                        1*u.cm, 0, 0*np.pi/180, np.pi/2, phi0=0) == 
+            pytest.approx(90))
+    
+    # Test case where flare must cover the entire stellar surface
+    assert (calculate_angular_radius(1*u.erg/u.cm**2/u.s, 1, 4*np.pi*u.erg/u.s, 
+                                        1*u.cm, 0, 0*np.pi/180, np.pi/2, phi0=0) 
+            == pytest.approx(180))
+
+    
+    
+## ------------- TESTING calculate_specific_flare_flux(mission, flaret=1e4) ------------
+
+def test_calculate_scpecific_flare_flux():
+    # Are the units correct?
+    assert (calculate_specific_flare_flux("TESS", flaret=1e4).unit 
+            == u.erg / u.s / u.cm**2)
+    
+    # Doe I get zero if flare T = 0K?
+    assert calculate_specific_flare_flux("TESS", flaret=0).value == 0.
+    
+    # Is Kepler flux higher for T>10kK?
+    for t in [1e4,5e4,1e5]:
+        assert (calculate_specific_flare_flux("Kepler", flaret=t) > 
+                calculate_specific_flare_flux("TESS", flaret=t))
+        
+    # Is TESS flux higher for T=1000K?
+    assert (calculate_specific_flare_flux("Kepler", flaret=1e3) <
+            calculate_specific_flare_flux("TESS", flaret=1e3))
+    
+    # Wrong Key throws error:
+    with pytest.raises(KeyError) as e:
+        calculate_specific_flare_flux("Gaia")
+    with pytest.raises(KeyError) as e:
+        calculate_specific_flare_flux(np.nan)
+        
+    # NaN input throws error:
+    with pytest.raises(ValueError) as e:
+        calculate_specific_flare_flux("Kepler",flaret=np.nan)
 
 
 ## ------------- TESTING daylength(l, i) --------------------------

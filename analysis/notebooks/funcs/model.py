@@ -4,7 +4,70 @@ import pandas as pd
 from .funcs import no_nan_inf
 
 import astropy.units as u
+
 from astropy.constants import c, h, k_B, R_sun, L_sun
+
+from altaipony.fakeflares import aflare
+
+# Read in response curve ---------------------------------------------
+response_curve = {"TESS":"TESS.txt",
+                  "Kepler":"kepler_lowres.txt"}
+for key, val in response_curve.items():
+    df = pd.read_csv(f"static/{val}",
+                     delimiter="\s+", skiprows=8)
+    df = df.sort_values(by="nm", ascending=True)
+    rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
+    rres = (df.response).values
+    response_curve[key] = (rwav,rres)
+#----------------------------------------------------------------------
+
+def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+              phi=None, num_pts=100, qlum=None,
+              Fth=None, R=None, median=0):
+    """Full model.
+    
+    Parameters:
+    ------------
+    phi_a : float (0,2pi)
+        longitude of the flare peak in rad
+    theta_a : float (0, pi/2)
+        latitude of the flaring region in rad
+    a : float >0
+        relative amplitude of the flare
+    fwhm : float >0
+        FWHM of the flare in fractions of 2pi
+    i : float
+        inclination in rad
+    phi0 : float (0,2pi)
+        longitude that is facing the observer a t=0
+    phi : array of floats >0 
+        longitudes 
+    num_pts : int
+        number of grid points
+    qlum : astropy Quantity
+        quiescent luminosity in defined band in erg/s
+    Fth : astropy Quantity
+        specific flux of the flare at a given temperature
+        and in a defined band in erg/s/cm^2
+    R : astropy Quantity
+        stellar radius
+    median : float
+        quiescent flux of the light curve
+        
+    Return:
+    -------
+    array of floats -  model light curve
+    """
+
+    radius = calculate_angular_radius(Fth, a, qlum, R, phi_a, theta_a, i, phi0=phi0)
+
+    flare = aflare(phi, phi_a, fwhm, a*median,)
+
+    latitudes, longitudes, pos = dot_ensemble_circular(theta_a, phi0,radius, num_pts=num_pts)
+    
+    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i)
+
+    return m + median
 
 def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     """Take a flare light curve and a rotating ensemble of latitudes
@@ -378,37 +441,80 @@ def black_body_spectrum(wav,t):
             .to("erg/s/cm**3")) #simplify the units
 
 
-def calculate_relative_flare_area(dist, rad, qflux, amp, mission, flaret=1e4):
+# def calculate_relative_flare_area(dist, rad, qflux, amp, mission, flaret=1e4):
+#     """Get the flare area in rel. unit
+    
+#     Parameters:
+#     -----------
+#     dist : float
+#         distance to target in parsecs
+#     rad : float
+#         radius in solar radii
+#     qflux : float
+#         quiescent flux in erg/s/cm^2
+#     amp : float
+#         (0,inf) flare amplitude in rel. flux
+#     mission : string
+#         TESS or Kepler
+#     flaret : float
+#         flare black body temperature, default 10kK
+#     """
+#     # Give units to everything:
+#     dcm = dist * u.pc
+#     rcm = rad * R_sun
+#     qflux = qflux * u.erg/u.s/u.cm**2
+    
+#     # Read in response curve:
+#     response_curve_path = {"TESS":"TESS.txt",
+#                            "Kepler":"kepler_lowres.txt"}
+#     df = pd.read_csv(f"static/{response_curve_path[mission]}",
+#                      delimiter="\s+", skiprows=8)
+#     df = df.sort_values(by="nm", ascending=True)
+#     rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
+#     rres = (df.response).values
+    
+#     # create an array to upsample the filter curve to
+#     w = np.arange(3000,13001) * u.angstrom
+
+#     # interpolate thermal spectrum onto response 
+#     # curve wavelength array, then sum up
+#     # flux times response curve:
+
+#     # Generate a thermal spectrum at the flare 
+#     # temperature over an array of wavelength w:
+#     thermf = black_body_spectrum(w, flaret) 
+    
+#     # Interpolate response from rwav to w:
+#     rres = np.interp(w,rwav,rres)
+    
+#     # Integrating the flux of the thermal 
+#     # spectrum times the response curve over wavelength:
+#     calflareflux = np.trapz(thermf * rres, x=w)
+    
+#     return (((amp * qflux) / (calflareflux)) * (dcm / rcm)**2.).decompose()
+
+def calculate_specific_flare_flux(mission, flaret=1e4):
     """Get the flare area in rel. unit
     
     Parameters:
     -----------
-    dist : float
-        distance to target in parsecs
-    rad : float
-        radius in solar radii
-    qflux : float
-        quiescent flux in erg/s/cm^2
-    amp : float
-        (0,inf) flare amplitude in rel. flux
     mission : string
         TESS or Kepler
     flaret : float
         flare black body temperature, default 10kK
+        
+    Return:
+    -------
+    specific flare flux in units erg/
     """
-    # Give units to everything:
-    dcm = dist * u.pc
-    rcm = rad * R_sun
-    qflux = qflux * u.erg/u.s/u.cm**2
+    if no_nan_inf([flaret]) == False:
+        raise ValueError("flaret is NaN or Inf.")
     
-    # Read in response curve:
-    response_curve_path = {"TESS":"TESS.txt",
-                           "Kepler":"kepler_lowres.txt"}
-    df = pd.read_csv(f"static/{response_curve_path[mission]}",
-                     delimiter="\s+", skiprows=8)
-    df = df.sort_values(by="nm", ascending=True)
-    rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
-    rres = (df.response).values
+    try:
+        # Read in response curve:
+        rwav, rres = response_curve[mission]
+    except KeyError:
+        raise KeyError("Mission can be either Kepler or TESS.")
     
     # create an array to upsample the filter curve to
     w = np.arange(3000,13001) * u.angstrom
@@ -420,12 +526,44 @@ def calculate_relative_flare_area(dist, rad, qflux, amp, mission, flaret=1e4):
     # Generate a thermal spectrum at the flare 
     # temperature over an array of wavelength w:
     thermf = black_body_spectrum(w, flaret) 
-    
+
     # Interpolate response from rwav to w:
-    rres = np.interp(w,rwav,rres)
-    
+    rres = np.interp(w,rwav,rres, left=0, right=0)
+
     # Integrating the flux of the thermal 
     # spectrum times the response curve over wavelength:
-    calflareflux = np.trapz(thermf * rres, x=w)
+    return np.trapz(thermf * rres, x=w).to("erg/cm**2/s")
     
-    return (((amp * qflux) / (calflareflux)) * (dcm / rcm)**2.).decompose()
+    
+def calculate_angular_radius(Fth, a, qlum, R, lon, lat, i, phi0=0):
+    """Calculate angular radius in degrees from.
+    
+    Parameters:
+    ------------
+    Fth : astropy value > 0
+        specific flare flux in erg/cm^2/s
+    a : float > 0
+        relative flare amplitude
+    qlum : astropy value > 0
+        quiescent luminosity in erg/s
+    R : float > 0
+        stellar radius in solar radii
+    lon : float or array (0,2pi)
+        longitude in rad 
+    lat : float or array(-pi/2, pi/2)
+        latitude in rad 
+    i : float (0, pi/2)
+        inclination
+    
+    Return:
+    -------
+    float - radius of flaring area in deg
+    """
+    
+    A = (a * qlum) / (Fth * lambert(lon%(np.pi), i, lat, phi0=phi0))
+   # print("AREA", A, 4 * np.pi * R**2)
+    if np.sqrt( A / (4 * np.pi * R**2)) > 1:
+        raise ValueError("Flare area seems larger than stellar surface.")
+    
+    return (np.arcsin(np.sqrt( A / (4 * np.pi * R**2) )) * 2.).to("deg").value
+    
