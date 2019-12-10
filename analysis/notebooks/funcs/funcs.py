@@ -13,38 +13,18 @@ import sys, os
 
 from collections import defaultdict
 
-def no_nan_inf(l):
-    """Check arguments in list for Inf and NaN.
-    Return True if all values are finite, and not NaN.
-    
-    Parameters:
-    -----------
-    l : list
-        contains floats, ints, and arrays of these values
-        
-    Return:
-    -------
-    bool
-    """
-    for elem in l:
-        if isinstance(elem,np.ndarray):
-            if (np.isnan(elem).any() |  (not np.isfinite(elem).any())):
-                return False
-        if (isinstance(elem, float) | isinstance(elem, int)):
-            if (np.isnan(elem) |  (not np.isfinite(elem))):
-                return False
-    return True
+
 
 def get_window_length_dict():
     """Collection of window lengths
     customized to individual LCs.
-    
+
     Returns:
     --------
     dictionary with defaul return value None
     """
-    l25 = [(x, 25) for x in   [44984200, 98874143, 388903843, 332623751, 44892011, 
-                               29780677, 340703996, 395130640, 441000085, 
+    l25 = [(x, 25) for x in   [44984200, 98874143, 388903843, 332623751, 44892011,
+                               29780677, 340703996, 395130640, 441000085,
                                53603145, 144776281,]]
     l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
                                272349442, 277539431, 293561794, 369555560,
@@ -52,7 +32,7 @@ def get_window_length_dict():
     l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
                                420001446]]
     l115 = [(x, 115) for x in [328254412,]]
-    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
+    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928,
                                398985964, 322568489, 2470992, 1539914,
                                117733581, 73118477]]
     L = [l25, l55, l75, l115,l555]
@@ -68,8 +48,8 @@ def write_flares_to_file(flc, cluster):
     Write the resulting flare table to file, adding
     it  to the rest.
     '''
-    cols = ['TIC', 'ampl_rec', 'cstart', 'cstop', 
-            'ed_rec', 'ed_rec_err', 'istart', 'istop', 
+    cols = ['TIC', 'ampl_rec', 'cstart', 'cstop',
+            'ed_rec', 'ed_rec_err', 'istart', 'istop',
             'tstart', 'tstop', 'Campaign']
             #'saturation_f10']
     try:
@@ -78,7 +58,7 @@ def write_flares_to_file(flc, cluster):
     except:
         print('Create a file named {}_flares.csv'.format(cluster))
         df = pd.DataFrame(columns=cols)
-        
+
     lbefore = flc.flares[~flc.flares.ed_rec.isnull()].shape[0]
     if lbefore == 0:
         emptydf = pd.DataFrame(dict(zip(cols, [flc.targetid] + [np.nan] * (len(cols) - 1))), index=[0])
@@ -93,18 +73,18 @@ def write_flares_to_file(flc, cluster):
    # print('Added {} flares to the {} found so far in {}.'.format(lafter-lbefore, lbefore, cluster))
     df.to_csv('{0}_flares.csv'.format(cluster), index=False)
     return
-    
+
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
                            sector=None,TIC=None):
     '''Read in custom aperture light curve
     from TESS. Needs specific naming convention.
     Applies pre-defined quality masks.
-    
+
     Parameters:
     -----------
     path : str
         path to file
-    
+
     Returns:
     --------
     FlareLightCurve
@@ -130,14 +110,14 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     return flc
 
 def fix_mask(flc):
-    '''Here the masks for different TESS 
-    sectors are defined and applied to 
+    '''Here the masks for different TESS
+    sectors are defined and applied to
     light curve fluxes.
-    
+
     Parameters:
     ------------
     flc : FlareLightCurve
-    
+
     Returns:
     ----------
     FlareLightCurve
@@ -155,14 +135,14 @@ def fix_mask(flc):
     if flc.campaign in masks.keys():
         for sta, fin in masks[flc.campaign]:
             flc.flux[np.where((flc.cadenceno >= sta) & (flc.cadenceno <= fin))] = np.nan
-            
+
     flc.quality[:] = np.isnan(flc.flux)
     return flc
 
 def get_window_length_dict():
     l15 = [(x, 15) for x in   [44984200]]
-    l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
-                               29780677, 340703996, 395130640, 441000085, 
+    l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011,
+                               29780677, 340703996, 395130640, 441000085,
                                53603145, 144776281,]]
     l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
                                272349442, 277539431, 293561794, 369555560,
@@ -170,7 +150,7 @@ def get_window_length_dict():
     l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
                                420001446]]
     l115 = [(x, 115) for x in [328254412,]]
-    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
+    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928,
                                398985964, 322568489, 2470992, 1539914,
                                117733581, 73118477]]
     L = [l15, l25, l55, l75, l115,l555]

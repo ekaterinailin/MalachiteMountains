@@ -1,94 +1,129 @@
-from altaipony.fakeflares import aflare
+#from altaipony.fakeflares import aflare
 
 from scipy import optimize
+import numpy as np
+
+from .model import big_model
 
 
-def aflare2(time, t0, fwhm, ampl, median, upsample=True, uptime=10):
-    """Modified `aflare` classic flare shape.
-    Originally from Davenport et al. 2014, but
-    adding the median flux value to return the 
-    full flux. 
-    
-    See `aflare` in: 
-    https://github.com/ekaterinailin/AltaiPony/blob/master/altaipony/fakeflares.py
-    
-    Upsamples the flare model by a factor of 10 
-    per default and samples back down again
-    to improve the energy estimate.
-    
-    
-    """
-    return (aflare(time, t0, fwhm*2, ampl, 
-                   upsample=upsample, uptime=uptime) + median)
+def logit(function):
+    '''Make a probability distribution
+    a log probability distribution.'''
+    def wrapper(*args, **kwargs):
+        result = function(*args, **kwargs)
+        np.seterr(divide='ignore') # ignore division by zero because you want to have the -np.inf results
+        result = np.log(result)
+        return result
+    return wrapper
 
-def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
+
+@logit
+def uninformative_prior(rate, minrate, maxrate):
+    '''Uninformative prior for the rates.
+    Uniform within [minrate, maxrate].
+
+    Parameters:
+    -------------
+    rate : float
+
+    minrate, maxrate : float
+        interval in which rate is constrained
+
+    Return:
+        Prior probability
     '''
-    The Analytic Flare Model evaluated for a single-peak (classical).
-    Reference Davenport et al. (2014) http://arxiv.org/abs/1411.3723
-    Use this function for fitting classical flares with most curve_fit
-    tools.
-    Note: this model assumes the flux before the flare is zero centered
-    Parameters
-    ----------
-    t : 1-d array
-        The time array to evaluate the flare over
-    tpeak : float
-        The time of the flare peak
-    dur : float
-        The duration of the flare
-    ampl : float
-        The amplitude of the flare
-    upsample : bool
-        If True up-sample the model flare to ensure more precise energies.
-    uptime : float
-        How many times to up-sample the data (Default is 10)
-    Returns
-    -------
-    flare : 1-d array
-        The flux of the flare model evaluated at each time
-    '''
-    _fr = [1.00000, 1.94053, -0.175084, -2.24588, -1.12498]
-    _fd = [0.689008, -1.60053, 0.302963, -0.278318]
-
-    fwhm = dur/2. # crude approximation for a triangle shape would be dur/2.
-
-    if upsample:
-        dt = np.nanmedian(np.diff(t))
-        timeup = np.linspace(min(t)-dt, max(t)+dt, t.size * uptime)
-
-        flareup = np.piecewise(timeup, [(timeup<= tpeak) * (timeup-tpeak)/fwhm > -1.,
-                                        (timeup > tpeak)],
-                                    [lambda x: (_fr[0]+                       # 0th order
-                                                _fr[1]*((x-tpeak)/fwhm)+      # 1st order
-                                                _fr[2]*((x-tpeak)/fwhm)**2.+  # 2nd order
-                                                _fr[3]*((x-tpeak)/fwhm)**3.+  # 3rd order
-                                                _fr[4]*((x-tpeak)/fwhm)**4. ),# 4th order
-                                     lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm)*_fd[1] ) +
-                                                _fd[2]*np.exp( ((x-tpeak)/fwhm)*_fd[3] ))]
-                                    ) * np.abs(ampl) # amplitude
-
-        # and now downsample back to the original time...
-        ## this way might be better, but makes assumption of uniform time bins
-        # flare = np.nanmean(flareup.reshape(-1, uptime), axis=1)
-
-        ## This way does linear interp. back to any input time grid
-        # flare = np.interp(t, timeup, flareup)
-
-        ## this was uses "binned statistic"
-        downbins = np.concatenate((t-dt/2.,[max(t)+dt/2.]))
-        flare,_,_ = binned_statistic(timeup, flareup, statistic='mean',
-                                     bins=downbins)
-
+    if ((rate >= minrate) & (rate <= maxrate)):
+        return 1. / (maxrate - minrate)
     else:
-        flare = np.piecewise(t, [(t<= tpeak) * (t-tpeak)/fwhm > -1.,
-                                 (t > tpeak)],
-                                [lambda x: (_fr[0]+                       # 0th order
-                                            _fr[1]*((x-tpeak)/fwhm)+      # 1st order
-                                            _fr[2]*((x-tpeak)/fwhm)**2.+  # 2nd order
-                                            _fr[3]*((x-tpeak)/fwhm)**3.+  # 3rd order
-                                            _fr[4]*((x-tpeak)/fwhm)**4. ),# 4th order
-                                 lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm)*_fd[1] ) +
-                                            _fd[2]*np.exp( ((x-tpeak)/fwhm)*_fd[3] ))]
-                                ) * np.abs(ampl) # amplitude
+        return 0
 
-    return flare
+
+@logit
+def gaussian_prior(x, mu, sigma):
+    '''Evaluate a normalized Gaussian function
+    with mu and sigma at x. NOT TESTED.'''
+    if x > np.pi/2:
+        return 0
+    else:
+        return  1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2))
+
+
+def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
+    '''Do some checks to make sure MCMC will work. NOT TESTED.'''
+    if not np.isfinite(lp):
+        return -np.inf
+    if np.isnan(lp):
+        return -np.inf
+    else:
+        return lp
+
+
+def log_prior(theta, i_mu=None, i_sigma=None, phi_a_min=0,
+              phi_a_max=1e9, theta_a_min=0,
+              theta_a_max=np.pi/2, a_min=0, a_max=1e9,
+              fwhm_min=0, fwhm_max=1e9, phi0_min=0,
+              phi0_max=2*np.pi):
+    """Uniform prior for start time,
+    amplitude, and duration.
+
+    - accounts for uncertainties in inclination (prior distribution=Gauss?)
+    - latitude between 0 and 90 deg
+    - longitude always positive (can go multiple periods into light curve)
+    - FWHM always positive.
+    - Amplitude always positive.
+
+    Parameters:
+    ------------
+    theta : tuple
+        start time, duration, amplitude
+    x : array
+        time array to constrain start time
+    """
+    phi_a, theta_a, a, fwhm, i, phi0 =  theta
+
+    prior = (gaussian_prior(i, i_mu, i_sigma) +
+             uninformative_prior(phi_a, phi_a_min, phi_a_max) +
+             uninformative_prior(theta_a, theta_a_min, theta_a_max) +
+             uninformative_prior(a, a_min, a_max) +
+             uninformative_prior(fwhm, fwhm_min, fwhm_max) +
+             uninformative_prior(phi0, phi0_min, phi0_max))
+
+    return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
+
+
+def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
+    """Log likelihood function assuming
+    Gaussian uncertainties in the data points.
+    SHOULDNT THIS BE POISSON?
+    """
+
+    phi_a, theta_a, a, fwhm, i, phi0 = theta
+    model = big_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
+                      phi=phi, num_pts=100, qlum=qlum,
+                      Fth=Fth, R=R, median=median)
+    if (model-flux < -3*flux_err).any():
+      #  print(model-flux, 3*flux_err)
+        return np.nan
+    else:
+        fr2 = flux_err**2
+        val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
+        return val
+
+
+def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
+    """Posterior probability to pass to MCMC sampler.
+    """
+    lp = log_prior(theta, **kwargs)
+
+    if not np.isfinite(lp):
+        return -np.inf
+    try:
+        ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
+    except:
+        return -np.inf
+    if np.isnan(ll):
+        return -np.inf
+    return lp + ll
+
+
+
