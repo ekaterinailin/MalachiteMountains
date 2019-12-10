@@ -9,6 +9,8 @@ from astropy.constants import c, h, k_B, R_sun, L_sun
 
 from altaipony.fakeflares import aflare
 
+import matplotlib.pyplot as plt
+
 # Read in response curve ---------------------------------------------
 response_curve = {"TESS":"TESS.txt",
                   "Kepler":"kepler_lowres.txt"}
@@ -58,14 +60,16 @@ def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     -------
     array of floats -  model light curve
     """
-
-    radius = calculate_angular_radius(Fth, a, qlum, R, phi_a, theta_a, i, phi0=phi0)
-
+    #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
+    radius = calculate_angular_radius(Fth, a, qlum, R, 0, 0, np.pi/2, phi0=0) # the amplitude is the real one observed from the front
+    #print(radius, "Radius")
     flare = aflare(phi, phi_a, fwhm, a*median,)
-
-    latitudes, longitudes, pos = dot_ensemble_circular(theta_a, phi0,radius, num_pts=num_pts)
+  #  plt.plot(phi, flare)
+    latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
     
-    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i)
+    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+    #plt.plot(phi, m)
+   # print(lamb, np.max(lamb), np.min(lamb))
 
     return m + median
 
@@ -98,22 +102,21 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     if no_nan_inf([phi, latitudes, longitudes, flare, inclination, phi0]) == False:
         raise ValueError("One of your inputs in model() is or contains NaN or Inf.")
     
-    # Calculate the offset:
-    phi_ = phi-phi0
+    
     
     # Check if the dimensions of the inputs are right
     l = len(latitudes)
     assert l == len(longitudes)
-    assert len(phi_) == len(flare)
+    assert len(phi) == len(flare)
     # -----------------------------------------------
     
     # Get daylengths for all grid points 
     # and calculate day/night switches:
     Ds = daylength(latitudes, inclination)
-    onoff = np.full((l,phi_.shape[0]),0)
+    onoff = np.full((l,phi.shape[0]),0)
     
-    for i,d in enumerate(Ds):# How can I avoid this loop?
-        onoff[i,:] = on_off(phi_-longitudes[1], d)
+    for i,(d,lon) in enumerate(zip(Ds,longitudes)):# How can I avoid this loop?
+        onoff[i,:] = on_off(phi-lon, d, phi0=phi0)
     #------------------------------------------------
         
     # Why isn't it possible to just fill an array here?
@@ -124,7 +127,7 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
                             axis=1)
     A = []
     for i, ll in enumerate(latlon):
-        a = lambert(phi_-ll[1], inclination, ll[0])
+        a = lambert(phi-ll[1], inclination, ll[0], phi0=phi0)
         A.append(a)
     lamb = np.array(A)
     
@@ -559,8 +562,8 @@ def calculate_angular_radius(Fth, a, qlum, R, lon, lat, i, phi0=0):
     -------
     float - radius of flaring area in deg
     """
-    
-    A = (a * qlum) / (Fth * lambert(lon%(np.pi), i, lat, phi0=phi0))
+    #phi, i, l, phi0=0.
+    A = (a * qlum) / (Fth * lambert(lon%(2*np.pi), i, lat, phi0=phi0))
    # print("AREA", A, 4 * np.pi * R**2)
     if np.sqrt( A / (4 * np.pi * R**2)) > 1:
         raise ValueError("Flare area seems larger than stellar surface.")
