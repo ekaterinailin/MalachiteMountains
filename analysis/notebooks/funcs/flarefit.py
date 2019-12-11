@@ -101,13 +101,13 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     model = big_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
                       phi=phi, num_pts=100, qlum=qlum,
                       Fth=Fth, R=R, median=median)
-    if (model-flux < -3*flux_err).any():
-      #  print(model-flux, 3*flux_err)
-        return np.nan
-    else:
-        fr2 = flux_err**2
-        val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
-        return val
+#     if (model-flux < -3*flux_err).any():
+#       #  print(model-flux, 3*flux_err)
+#         return np.nan
+#    else:
+    fr2 = flux_err**2
+    val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
+    return val
 
 
 def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
@@ -116,12 +116,15 @@ def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
     lp = log_prior(theta, **kwargs)
 
     if not np.isfinite(lp):
+        print("prior inf")
         return -np.inf
     try:
         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
     except:
+        print("ll error")
         return -np.inf
     if np.isnan(ll):
+        print("ll nan")
         return -np.inf
     return lp + ll
 
