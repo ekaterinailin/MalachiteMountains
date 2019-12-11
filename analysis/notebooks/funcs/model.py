@@ -60,7 +60,7 @@ def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     """
     #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
     radius = calculate_angular_radius(Fth, a, qlum, R, 0, 0, np.pi/2, phi0=0) # the amplitude is the real one observed from the front
-    #print(radius, "Radius")
+   # print(radius, "Radius")
     flare = aflare(phi, phi_a, fwhm, a*median,)
   #  plt.plot(phi, flare)
     latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
@@ -68,7 +68,7 @@ def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     lamb, onoff, m = model(phi, latitudes, longitudes, flare, i, phi0=phi0)
     #plt.plot(phi, m)
    # print(lamb, np.max(lamb), np.min(lamb))
-
+    #print(lamb, onoff)
     return m + median
 
 def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
@@ -398,11 +398,11 @@ def daylength(l, i, P=1.):
             raise ValueError("Latitude must be in [-pi/2,pi/2]")
 
         res = formula(l,i)
-        res[l>=i] = P
+      #  res[l>=i] = P
         res[np.abs(l) >=i] = 0
+        res[l>=i] = P
 
-
-
+     #   print(res*P)
         return res * P
 
     elif ((isinstance(l, float)) | (isinstance(l, int))):
