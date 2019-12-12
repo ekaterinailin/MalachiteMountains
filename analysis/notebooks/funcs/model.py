@@ -372,7 +372,7 @@ def daylength(l, i, P=1.):
     Parameters:
     ------------
     l : array
-        longitude in rad
+        latitude in rad
     i : float
         inclination in rad
     P : float
