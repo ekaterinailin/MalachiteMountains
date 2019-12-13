@@ -562,7 +562,7 @@ def calculate_angular_radius(Fth, a, qlum, R, lon, lat, i, phi0=0):
     """
     #phi, i, l, phi0=0.
     A = (a * qlum) / (Fth * lambert(lon%(2*np.pi), i, lat, phi0=phi0))
-   # print("AREA", A, 4 * np.pi * R**2)
+    #print("AREA", A, 4 * np.pi * R**2, np.sqrt( A / (4 * np.pi * R**2)))
     if np.sqrt( A / (4 * np.pi * R**2)) > 1:
         raise ValueError("Flare area seems larger than stellar surface.")
 
