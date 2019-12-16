@@ -71,6 +71,56 @@ def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     #print(lamb, onoff)
     return m + median
 
+def big_model_sphere(phi_a, theta_a, a, fwhm, i, phi0=0,
+              phi=None, num_pts=100, qlum=None,
+              Fth=None, R=None, median=0):
+    """Full model.
+
+    Parameters:
+    ------------
+    phi_a : float (0,2pi)
+        longitude of the flare peak in rad
+    theta_a : float (0, pi/2)
+        latitude of the flaring region in rad
+    a : float >0
+        relative amplitude of the flare
+    fwhm : float >0
+        FWHM of the flare in fractions of 2pi
+    i : float
+        inclination in rad
+    phi0 : float (0,2pi)
+        longitude that is facing the observer a t=0
+    phi : array of floats >0
+        longitudes
+    num_pts : int
+        number of grid points
+    qlum : astropy Quantity
+        quiescent luminosity in defined band in erg/s
+    Fth : astropy Quantity
+        specific flux of the flare at a given temperature
+        and in a defined band in erg/s/cm^2
+    R : astropy Quantity
+        stellar radius
+    median : float
+        quiescent flux of the light curve
+
+    Return:
+    -------
+    array of floats -  model light curve
+    """
+    #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
+    radius = calculate_angular_radius(Fth, a, qlum, R) # the amplitude is the real one observed from the front
+   # print(radius, "Radius")
+    flare = aflare(phi, phi_a, fwhm, a*median,)
+    
+    latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius, num_pts=num_pts)
+
+    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+  #  plt.plot(phi, m)
+   # print(lamb, np.max(lamb), np.min(lamb))
+    #print(lamb, onoff)
+    return m + median
+
 def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     """Take a flare light curve and a rotating ensemble of latitudes
     and longitudes, and let it rotate.
@@ -536,8 +586,10 @@ def calculate_specific_flare_flux(mission, flaret=1e4):
     return np.trapz(thermf * rres, x=w).to("erg/cm**2/s")
 
 
-def calculate_angular_radius(Fth, a, qlum, R, lon, lat, i, phi0=0):
-    """Calculate angular radius in degrees from.
+def calculate_angular_radius_approximate(Fth, a, qlum, R, lon, lat, i, phi0=0):
+    """Calculate angular radius in degrees from. Approximate
+    the Lambert effect by the effect at the center of the flare.
+    DEPRECATED
 
     Parameters:
     ------------
@@ -567,6 +619,30 @@ def calculate_angular_radius(Fth, a, qlum, R, lon, lat, i, phi0=0):
         raise ValueError("Flare area seems larger than stellar surface.")
 
     return (np.arcsin(np.sqrt( A / (4 * np.pi * R**2) )) * 2.).to("deg").value
+
+def calculate_angular_radius(Fth, a, qlum, R):
+    """Calculate angular radius in degrees from. Do the integration
+        over the polar cap.
+
+    Parameters:
+    ------------
+    Fth : astropy value > 0
+        specific flare flux in erg/cm^2/s
+    a : float > 0
+        relative flare amplitude
+    qlum : astropy value > 0
+        quiescent luminosity in erg/s
+    R : float > 0
+        stellar radius in solar radii
+   
+    Return:
+    -------
+    float - radius of flaring area in deg
+    """
+    rads = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
+    if rads > 1:
+        raise ValueError("Flare area seems larger than stellar hemisphere.")
+    return np.arcsin(rads).to("deg").value
 
 def aflare2(time, t0, fwhm, ampl, median, upsample=True, uptime=10):
     """Modified `aflare` classic flare shape.
