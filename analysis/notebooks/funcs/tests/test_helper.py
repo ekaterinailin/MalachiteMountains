@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ..funcs import no_nan_inf
+from ..helper import no_nan_inf
 
 cases = [((0, 0, np.nan), False),
          ((0, 0, 0), True), 

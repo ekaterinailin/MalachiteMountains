@@ -3,7 +3,7 @@
 from scipy import optimize
 import numpy as np
 
-from .model import big_model, big_model_sphere
+from .model import full_model
 
 
 def logit(function):
@@ -90,6 +90,45 @@ def log_prior(theta, i_mu=None, i_sigma=None, phi_a_min=0,
 
     return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
 
+
+
+
+def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
+    """Log likelihood function assuming
+    Gaussian uncertainties in the data points.
+    SHOULDNT THIS BE POISSON?
+    """
+
+    phi_a, theta_a, a, fwhm, i, phi0 = theta
+    model = full_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
+                      phi=phi, num_pts=100, qlum=qlum,
+                      Fth=Fth, R=R, median=median)
+
+    fr2 = flux_err**2
+    val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
+    return val
+
+
+def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
+    """Posterior probability to pass to MCMC sampler.
+    """
+    lp = log_prior(theta, **kwargs)
+
+    if not np.isfinite(lp):
+        print("prior inf")
+        return -np.inf
+    try:
+        ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
+    except:
+        return -np.inf
+    if np.isnan(ll):
+        return -np.inf
+    return lp + ll
+
+#-------------------------------------------------------------------------------------
+# You can choose an uninformative prior if you don't know the inclination and still try
+# to fit the data.
+
 def log_prior_no_incl(theta, i_mu=None, i_sigma=None, phi_a_min=0,
                       phi_a_max=1e9, theta_a_min=0,
                       theta_a_max=np.pi/2, a_min=0, a_max=1e9,
@@ -98,7 +137,7 @@ def log_prior_no_incl(theta, i_mu=None, i_sigma=None, phi_a_min=0,
     """Uniform prior for start time,
     amplitude, and duration.
 
-    - accounts for uncertainties in inclination (prior distribution=Gauss?)
+    - no information on inclination
     - latitude between 0 and 90 deg
     - longitude always positive (can go multiple periods into light curve)
     - FWHM always positive.
@@ -122,79 +161,26 @@ def log_prior_no_incl(theta, i_mu=None, i_sigma=None, phi_a_min=0,
 
     return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
 
-
-def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
-    """Log likelihood function assuming
-    Gaussian uncertainties in the data points.
-    SHOULDNT THIS BE POISSON?
-    """
-
-    phi_a, theta_a, a, fwhm, i, phi0 = theta
-    model = big_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
-                      phi=phi, num_pts=100, qlum=qlum,
-                      Fth=Fth, R=R, median=median)
-#     if (model-flux < -3*flux_err).any():
-#       #  print(model-flux, 3*flux_err)
-#         return np.nan
-#    else:
-    fr2 = flux_err**2
-    val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
-    return val
-
-
-def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
-    """Posterior probability to pass to MCMC sampler.
-    """
-    lp = log_prior(theta, **kwargs)
-
-    if not np.isfinite(lp):
-        print("prior inf")
-        return -np.inf
-    try:
-        ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
-    except:
-        print("ll error")
-        return -np.inf
-    if np.isnan(ll):
-        print("ll nan")
-        return -np.inf
-    return lp + ll
-
 def log_probability_no_incl(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
     """Posterior probability to pass to MCMC sampler.
     """
     lp = log_prior_no_incl(theta, **kwargs)
 
     if not np.isfinite(lp):
-        print("prior inf")
         return -np.inf
-    try:
-        ll = log_likelihood_sphere(theta, phi, flux, flux_err, qlum, Fth, R, median)
+   
+   try:
+        ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
+    
     except:
-        print("ll error")
         return -np.inf
+    
     if np.isnan(ll):
-        print("ll nan")
         return -np.inf
+    
     return lp + ll
 
-def log_likelihood_sphere(theta, phi, flux, flux_err, qlum, Fth, R, median ):
-    """Log likelihood function assuming
-    Gaussian uncertainties in the data points.
-    SHOULDNT THIS BE POISSON?
-    """
 
-    phi_a, theta_a, a, fwhm, i, phi0 = theta
-    model = big_model_sphere(phi_a, theta_a, a, fwhm, i, phi0=phi0,
-                      phi=phi, num_pts=100, qlum=qlum,
-                      Fth=Fth, R=R, median=median)
-#     if (model-flux < -3*flux_err).any():
-#       #  print(model-flux, 3*flux_err)
-#         return np.nan
-#    else:
-    fr2 = flux_err**2
-    val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
-    return val
 
 
 

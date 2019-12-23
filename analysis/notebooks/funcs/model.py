@@ -1,15 +1,16 @@
 import numpy as np
 import pandas as pd
 
-from .helper import no_nan_inf
+from .helper import no_nan_inf, create_spherical_grid
 
 import astropy.units as u
 
 from astropy.constants import c, h, k_B, R_sun, L_sun
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # Read in response curve ---------------------------------------------
+
 response_curve = {"TESS":"TESS.txt",
                   "Kepler":"kepler_lowres.txt"}
 for key, val in response_curve.items():
@@ -19,9 +20,17 @@ for key, val in response_curve.items():
     rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
     rres = (df.response).values
     response_curve[key] = (rwav,rres)
+    
 #----------------------------------------------------------------------
 
-def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+
+# Create a spherical grid only one for the entire analysis ------------
+
+PHI, THETA = create_spherical_grid(int(1e6))
+
+#----------------------------------------------------------------------
+
+def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
     """Full model.
@@ -60,68 +69,22 @@ def big_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     """
     #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
     radius = calculate_angular_radius(Fth, a, qlum, R, 0, 0, np.pi/2, phi0=0) # the amplitude is the real one observed from the front
-   # print(radius, "Radius")
+    # print(radius, "Radius")
     flare = aflare(phi, phi_a, fwhm, a*median,)
-  #  plt.plot(phi, flare)
-    latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
+    #  plt.plot(phi, flare)
+    if radius<10: #deg
+        latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
+    else: 
+        latitudes, longitudes, pos = dot_ensemble_spherical(theta_a, 0, radius)
 
-    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+    lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
     #plt.plot(phi, m)
-   # print(lamb, np.max(lamb), np.min(lamb))
+    # print(lamb, np.max(lamb), np.min(lamb))
     #print(lamb, onoff)
     return m + median
 
-def big_model_sphere(phi_a, theta_a, a, fwhm, i, phi0=0,
-              phi=None, num_pts=100, qlum=None,
-              Fth=None, R=None, median=0):
-    """Full model.
 
-    Parameters:
-    ------------
-    phi_a : float (0,2pi)
-        longitude of the flare peak in rad
-    theta_a : float (0, pi/2)
-        latitude of the flaring region in rad
-    a : float >0
-        relative amplitude of the flare
-    fwhm : float >0
-        FWHM of the flare in fractions of 2pi
-    i : float
-        inclination in rad
-    phi0 : float (0,2pi)
-        longitude that is facing the observer a t=0
-    phi : array of floats >0
-        longitudes
-    num_pts : int
-        number of grid points
-    qlum : astropy Quantity
-        quiescent luminosity in defined band in erg/s
-    Fth : astropy Quantity
-        specific flux of the flare at a given temperature
-        and in a defined band in erg/s/cm^2
-    R : astropy Quantity
-        stellar radius
-    median : float
-        quiescent flux of the light curve
-
-    Return:
-    -------
-    array of floats -  model light curve
-    """
-    #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
-    radius = calculate_angular_radius(Fth, a, qlum, R) # the amplitude is the real one observed from the front
-   # print(radius, "Radius")
-    flare = aflare(phi, phi_a, fwhm, a*median,)
-    
-    latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius, num_pts=num_pts)
-
-    lamb, onoff, m = model(phi, latitudes, longitudes, flare, i, phi0=phi0)
-  #  plt.plot(phi, m)
-   # print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
-    return m + median
-
-def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
+def lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     """Take a flare light curve and a rotating ensemble of latitudes
     and longitudes, and let it rotate.
 
@@ -149,8 +112,6 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
 
     if no_nan_inf([phi, latitudes, longitudes, flare, inclination, phi0]) == False:
         raise ValueError("One of your inputs in model() is or contains NaN or Inf.")
-
-
 
     # Check if the dimensions of the inputs are right
     l = len(latitudes)
@@ -187,8 +148,7 @@ def model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     return lamb, onoff, np.sum(lamb * onoff, axis=0) * flare / l
 
 
-
-def dot_ensemble_circular(lat, lon, radius, num_pts=200):
+def dot_ensemble_circular(lat, lon, radius, num_pts=100):
     """For radii smaller than 5 deg, you can approximate
     a uniform grid on a sphere by projecting a uniform
     grid on a circular surface (sunflower shape).
@@ -254,12 +214,9 @@ def dot_ensemble_circular(lat, lon, radius, num_pts=200):
     return lats, lons, (x,y,z)
 
 
-def dot_ensemble_spherical(lat, lon, radius, num_pts=5e4):
-    """Create an ensemble of dots on a sphere.
-
-    Method see:
-    https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
-    answered by CR Drost
+def dot_ensemble_spherical(lat, lon, radius, phi=PHI, theta=THETA):
+    """Create an ensemble of dots on a sphere. Use the pre-defined
+    grid in phi and theta
 
     Parameters:
     -----------
@@ -269,30 +226,20 @@ def dot_ensemble_spherical(lat, lon, radius, num_pts=5e4):
         longitude of center of ensemble in rad
     radius : float
         angular radius of the ensemble in deg
-    num_pts : int
-        number of points used to generate the
-        full sphere evenly covered with dots
-        in a sunflower shape
+    phi : array of float
+        latitudes of grid points
+    theta : array of floats 
+        longitudes of grid points
 
     Return:
     -------
     latitudes, longitudes  -  np.arrays of dots
     that go into the ensemble.
     """
-    if no_nan_inf([lat, lon, radius, num_pts]) == False:
+    if no_nan_inf([lat, lon, radius]) == False:
         raise ValueError("One of your inputs in "\
                          "dot_ensemble_spherical is"\
                          " or contains NaN or Inf.")
-
-    # This is CR Drost's solution to the sunflower spiral:
-    indices = np.arange(0, num_pts, dtype=float) + 0.5
-    phi = np.arccos(1 - 2 * indices/num_pts) #latitude
-    theta = np.pi * (1 + 5**0.5) * indices #longitude
-
-    # Fold onto on sphere
-    phi = np.pi / 2 - phi % (2 * np.pi)
-    theta = theta % (np.pi * 2)
-
 
     # Calculate the distance of the dots to the center of the ensemble
     gcs = great_circle_distance(lat, lon, phi, theta)
@@ -300,6 +247,7 @@ def dot_ensemble_spherical(lat, lon, radius, num_pts=5e4):
     # If distance is small enough, include in ensemble
     a = np.where(gcs < (radius * np.pi / 180))[0]
     return phi[a], theta[a]
+
 
 def great_circle_distance(a, la, b, lb):
     """Calcultate the angular distance on
@@ -324,6 +272,7 @@ def great_circle_distance(a, la, b, lb):
         raise ValueError("One of your inputs is or contains NaN or Inf.")
 
     return np.arccos(np.sin(a) * np.sin(b) + np.cos(a) * np.cos(b) * np.cos(la-lb))
+
 
 def lambert(phi, i, l, phi0=0.):
     """Calculate Lambert's law of geometric
@@ -353,6 +302,7 @@ def lambert(phi, i, l, phi0=0.):
     if no_nan_inf([l,i,phi,phi0]) == False:
         raise ValueError("One of your inputs is or contains NaN or Inf.")
     return np.sin(l) * np.cos(i) + np.cos(l) * np.sin(i) * np.cos(phi-phi0)
+
 
 def on_off(phi, daylength, phi0=0.):
     """Calculate the visibility step function
@@ -411,6 +361,7 @@ def on_off(phi, daylength, phi0=0.):
 
     else:
         raise ValueError("Phi must be float, int, or an array of either.")
+
 
 def daylength(l, i, P=1.):
     """Determine the day length, as in here:
@@ -473,8 +424,7 @@ def daylength(l, i, P=1.):
             return formula(l,i) * P
 
 
-
-def black_body_spectrum(wav,t):
+def black_body_spectrum(wav, t):
     """Takes an array of wavelengths and
     a temperature and produces an array
     of fluxes from a thermal spectrum
@@ -491,58 +441,6 @@ def black_body_spectrum(wav,t):
     return (( (2 * np.pi * h * c**2) / (wav**5) / (np.exp( (h * c) / (wav * k_B * t) ) - 1))
             .to("erg/s/cm**3")) #simplify the units
 
-
-# def calculate_relative_flare_area(dist, rad, qflux, amp, mission, flaret=1e4):
-#     """Get the flare area in rel. unit
-
-#     Parameters:
-#     -----------
-#     dist : float
-#         distance to target in parsecs
-#     rad : float
-#         radius in solar radii
-#     qflux : float
-#         quiescent flux in erg/s/cm^2
-#     amp : float
-#         (0,inf) flare amplitude in rel. flux
-#     mission : string
-#         TESS or Kepler
-#     flaret : float
-#         flare black body temperature, default 10kK
-#     """
-#     # Give units to everything:
-#     dcm = dist * u.pc
-#     rcm = rad * R_sun
-#     qflux = qflux * u.erg/u.s/u.cm**2
-
-#     # Read in response curve:
-#     response_curve_path = {"TESS":"TESS.txt",
-#                            "Kepler":"kepler_lowres.txt"}
-#     df = pd.read_csv(f"static/{response_curve_path[mission]}",
-#                      delimiter="\s+", skiprows=8)
-#     df = df.sort_values(by="nm", ascending=True)
-#     rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
-#     rres = (df.response).values
-
-#     # create an array to upsample the filter curve to
-#     w = np.arange(3000,13001) * u.angstrom
-
-#     # interpolate thermal spectrum onto response
-#     # curve wavelength array, then sum up
-#     # flux times response curve:
-
-#     # Generate a thermal spectrum at the flare
-#     # temperature over an array of wavelength w:
-#     thermf = black_body_spectrum(w, flaret)
-
-#     # Interpolate response from rwav to w:
-#     rres = np.interp(w,rwav,rres)
-
-#     # Integrating the flux of the thermal
-#     # spectrum times the response curve over wavelength:
-#     calflareflux = np.trapz(thermf * rres, x=w)
-
-#     return (((amp * qflux) / (calflareflux)) * (dcm / rcm)**2.).decompose()
 
 def calculate_specific_flare_flux(mission, flaret=1e4):
     """Get the flare area in rel. unit
@@ -586,39 +484,6 @@ def calculate_specific_flare_flux(mission, flaret=1e4):
     return np.trapz(thermf * rres, x=w).to("erg/cm**2/s")
 
 
-def calculate_angular_radius_approximate(Fth, a, qlum, R, lon, lat, i, phi0=0):
-    """Calculate angular radius in degrees from. Approximate
-    the Lambert effect by the effect at the center of the flare.
-    DEPRECATED
-
-    Parameters:
-    ------------
-    Fth : astropy value > 0
-        specific flare flux in erg/cm^2/s
-    a : float > 0
-        relative flare amplitude
-    qlum : astropy value > 0
-        quiescent luminosity in erg/s
-    R : float > 0
-        stellar radius in solar radii
-    lon : float or array (0,2pi)
-        longitude in rad
-    lat : float or array(-pi/2, pi/2)
-        latitude in rad
-    i : float (0, pi/2)
-        inclination
-
-    Return:
-    -------
-    float - radius of flaring area in deg
-    """
-    #phi, i, l, phi0=0.
-    A = (a * qlum) / (Fth * lambert(lon%(2*np.pi), i, lat, phi0=phi0))
-    #print("AREA", A, 4 * np.pi * R**2, np.sqrt( A / (4 * np.pi * R**2)))
-    if np.sqrt( A / (4 * np.pi * R**2)) > 1:
-        raise ValueError("Flare area seems larger than stellar surface.")
-
-    return (np.arcsin(np.sqrt( A / (4 * np.pi * R**2) )) * 2.).to("deg").value
 
 def calculate_angular_radius(Fth, a, qlum, R):
     """Calculate angular radius in degrees from. Do the integration
@@ -631,7 +496,7 @@ def calculate_angular_radius(Fth, a, qlum, R):
     a : float > 0
         relative flare amplitude
     qlum : astropy value > 0
-        quiescent luminosity in erg/s
+        projected quiescent luminosity in erg/s
     R : float > 0
         stellar radius in solar radii
    
@@ -639,28 +504,14 @@ def calculate_angular_radius(Fth, a, qlum, R):
     -------
     float - radius of flaring area in deg
     """
-    rads = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
-    if rads > 1:
+    
+    sin = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
+    print(sin)
+    if sin > 1:
         raise ValueError("Flare area seems larger than stellar hemisphere.")
-    return np.arcsin(rads).to("deg").value
-
-def aflare2(time, t0, fwhm, ampl, median, upsample=True, uptime=10):
-    """Modified `aflare` classic flare shape.
-    Originally from Davenport et al. 2014, but
-    adding the median flux value to return the
-    full flux.
-
-    See `aflare` in:
-    https://github.com/ekaterinailin/AltaiPony/blob/master/altaipony/fakeflares.py
-
-    Upsamples the flare model by a factor of 10
-    per default and samples back down again
-    to improve the energy estimate.
+    return np.arcsin(sin).to("deg").value
 
 
-    """
-    return (aflare(time, t0, fwhm*2, ampl,
-                   upsample=upsample, uptime=uptime) + median)
 
 def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
     '''
@@ -733,3 +584,60 @@ def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
                                 ) * np.abs(ampl) # amplitude
 
     return flare
+
+
+
+#def aflare2(time, t0, fwhm, ampl, median, upsample=True, uptime=10):
+    #"""Modified `aflare` classic flare shape.
+    #Originally from Davenport et al. 2014, but
+    #adding the median flux value to return the
+    #full flux.
+
+    #See `aflare` in:
+    #https://github.com/ekaterinailin/AltaiPony/blob/master/altaipony/fakeflares.py
+
+    #Upsamples the flare model by a factor of 10
+    #per default and samples back down again
+    #to improve the energy estimate.
+
+
+    #"""
+    #return (aflare(time, t0, fwhm*2, ampl,
+                   #upsample=upsample, uptime=uptime) + median)
+                   
+                   
+                   
+#def calculate_angular_radius_approximate(Fth, a, qlum, R, lon, lat, i, phi0=0):
+    #"""Calculate angular radius in degrees from. Approximate
+    #the Lambert effect by the effect at the center of the flare.
+    #DEPRECATED
+
+    #Parameters:
+    #------------
+    #Fth : astropy value > 0
+        #specific flare flux in erg/cm^2/s
+    #a : float > 0
+        #relative flare amplitude
+    #qlum : astropy value > 0
+        #quiescent luminosity in erg/s
+    #R : float > 0
+        #stellar radius in solar radii
+    #lon : float or array (0,2pi)
+        #longitude in rad
+    #lat : float or array(-pi/2, pi/2)
+        #latitude in rad
+    #i : float (0, pi/2)
+        #inclination
+
+    #Return:
+    #-------
+    #float - radius of flaring area in deg
+    #"""
+    ##phi, i, l, phi0=0.
+    #A = (a * qlum) / (Fth * lambert(lon%(2*np.pi), i, lat, phi0=phi0))
+    ##print("AREA", A, 4 * np.pi * R**2, np.sqrt( A / (4 * np.pi * R**2)))
+    #if np.sqrt( A / (4 * np.pi * R**2)) > 1:
+        #raise ValueError("Flare area seems larger than stellar surface.")
+
+    #return (np.arcsin(np.sqrt( A / (4 * np.pi * R**2) )) * 2.).to("deg").value
+

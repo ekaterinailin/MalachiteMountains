@@ -7,8 +7,7 @@ import copy
 import numpy as np
 import pandas as pd
 
-from .custom_detrending import custom_detrending, iteratively_remove_sines
-from .funcs import read_custom_aperture_lc
+from .custom_detrending import custom_detrending
 
 import astropy.units as u
 
@@ -21,21 +20,8 @@ warnings.simplefilter("ignore")
 
 import matplotlib.pyplot as plt
 
-def fetch_lightcurve(target):
-    """Read in light curve from file.
 
-    Parameters:
-    -----------
-    target: Series
-        Description of the target.
-    """
-    path = (f"{CWD}/data/lcs/{target.ID}_{target.QCS:02d}_" \
-            f"{target.mission}_{target.typ}_{target.origin}.fits")
 
-    flc = read_custom_aperture_lc(path, mission=target.h_mission,
-                                  mode="LC", typ=target.origin,
-                                  TIC=target.ID, sector=target.QCS)
-    return flc
 
 def show_flare(target, save=False):
     """Get light curve and plot it."""
@@ -99,7 +85,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
     if plot==True:
 
         # Plot the periodogram
-        pg.plot(label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V")
+        pg.plot(label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V \n {period:.2f} h")
         plt.xlim(minfreq, maxfreq)
 
         # Optionally save to file
@@ -165,7 +151,7 @@ def remove_sinusoidal(target, plot=True, save=False):
 
         # Overplot the fitted function
         plt.plot(flck.time, model,
-                 c="navy",label=period)
+                 c="navy",label=f"{period:.2f}")
 
         # Plot the flux with the model subtracted
         offset = (target.view_max - target.view_min) * .3
@@ -174,7 +160,8 @@ def remove_sinusoidal(target, plot=True, save=False):
                  c="r",label="periodic signal subtracted")
 
         # Overplot the median flux value on the subtracted LC
-        plt.plot(flck.time, offset + np.full(len(flck.time),np.nanmedian(flck.flux)), c="k")
+        plt.plot(flck.time, offset + np.full(len(flck.time), np.nanmedian(flck.flux)),
+                 c="k", label="median (offset)")
 
         #Layout
         plt.xlim(target.view_start,target.view_stop)

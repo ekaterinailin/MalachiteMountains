@@ -12,33 +12,27 @@ from ..model import (daylength,
                      dot_ensemble_circular,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
-                     model)
+                     lightcurve_model)
 
-# ----------- TESTING calculate_angular_radius(Fth, a, qlum, R, lat, lon, i, phi=0) -------
+# ----------- TESTING calculate_angular_radius(Fth, a, qlum, R, lat, lon, i, phi=0) ------- Fth, a, qlum, R
 
 def test_calculate_angular_radius():
     # Test unphysical results: flare area > stellar surface
     with pytest.raises(ValueError) as e:
         calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 1e30*u.erg/u.s, 
-                                 .1*R_sun, 0, 0, np.pi/2, phi0=0)
+                                 .1*R_sun)
     # Test zero as input
     assert calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 0*u.erg/u.s, 
-                                    .1*R_sun, 0, 0, np.pi/2, phi0=0) == 0.
+                                    .1*R_sun,) == 0.
     # Test unit error
     with pytest.raises(u.UnitConversionError) as e:
         assert calculate_angular_radius(3e6*u.J/u.m**2/u.s, 2, 0*u.erg, 
-                                        .1*R_sun, 0, 0, np.pi/2, phi0=0)
+                                        .1*R_sun,)
     # Test case where flare must cover a hemisphere
-    assert (calculate_angular_radius(1*u.erg/u.cm**2/u.s, 0.5, 4*np.pi*u.erg/u.s, 
-                                        1*u.cm, 0, 0*np.pi/180, np.pi/2, phi0=0) == 
+    assert (calculate_angular_radius(1*u.erg/u.cm**2/u.s, 0.5, 2*np.pi*u.erg/u.s, 
+                                        1*u.cm, ) == 
             pytest.approx(90))
-    
-    # Test case where flare must cover the entire stellar surface
-    assert (calculate_angular_radius(1*u.erg/u.cm**2/u.s, 1, 4*np.pi*u.erg/u.s, 
-                                        1*u.cm, 0, 0*np.pi/180, np.pi/2, phi0=0) 
-            == pytest.approx(180))
 
-    
     
 ## ------------- TESTING calculate_specific_flare_flux(mission, flaret=1e4) ------------
 
@@ -167,13 +161,13 @@ def test_dot_ensemble_circular(lat, lon, r):
             dot_ensemble_circular(*case, num_pts=100)
     
     
-## ------------- TESTING dot_ensemble_spherical(lat, lon, radius, num_pts=1e4)-------------       
+## ------------- TESTING dot_ensemble_spherical(lat, lon, radius)-------------       
     
 def test_dot_ensemble_spherical():
     
     # Let the ensemble cover half a sphere
-    p, t = dot_ensemble_spherical(0, 0, 90, num_pts=1e4)
-    assert len(p) == 4999
+    p, t = dot_ensemble_spherical(0, 0, 90)
+    assert len(p) == 500001
     assert len(p) == len(t)
     assert (p < np.pi / 2).all()
     assert (p > -np.pi / 2).all()
@@ -181,18 +175,18 @@ def test_dot_ensemble_spherical():
     assert (t > 0 ).all()
     
     # Look at tiny radii producing only one ...
-    p,t = dot_ensemble_spherical(0, 0, 1, num_pts=1e4)
+    p,t = dot_ensemble_spherical(0, 0, .1)
     assert len(p) == 1
     
     # or no dots at all.
-    p,t = dot_ensemble_spherical(0, 0, .1, num_pts=1e4)
+    p,t = dot_ensemble_spherical(0, 0, .01)
     assert len(p) == 0
     
     # Test one failing case to make sure no_nan_inf is called:
     with pytest.raises(ValueError) as e:
-        dot_ensemble_spherical(0, np.nan, .1, num_pts=1e4)
+        dot_ensemble_spherical(0, np.nan, .1)
         
-## ------------- TESTING  model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
+## ------------- TESTING  lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
         
 def test_model():
     
@@ -204,7 +198,7 @@ def test_model():
     inclination = np.pi/2
     
     # Calculate the model
-    lamb, onoff, m = model(phi, latitudes, longitudes, flare, inclination,)
+    lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, inclination,)
     
     # Do some checks
     assert m[0] == 0
