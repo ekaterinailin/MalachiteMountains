@@ -7,6 +7,8 @@ from altaipony.lcio import from_path
 
 import sys, os
 
+CWD = "/".join(os.getcwd().split("/")[:-2])
+
 def no_nan_inf(l):
     """Check arguments in list for Inf and NaN.
     Return True if all values are finite, and not NaN.

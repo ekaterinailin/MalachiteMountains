@@ -26,8 +26,7 @@ for key, val in response_curve.items():
 
 # Create a spherical grid only one for the entire analysis ------------
 
-PHI, THETA = create_spherical_grid(int(1e6))
-
+PHI, THETA = create_spherical_grid(int(1e4))
 #----------------------------------------------------------------------
 
 def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
@@ -75,12 +74,68 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     if radius<10: #deg
         latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
     else: 
-        latitudes, longitudes, pos = dot_ensemble_spherical(theta_a, 0, radius)
+        latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
 
     lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
     #plt.plot(phi, m)
     # print(lamb, np.max(lamb), np.min(lamb))
     #print(lamb, onoff)
+    return m + median
+
+def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+              phi=None, num_pts=100, qlum=None,
+              Fth=None, R=None, median=0):
+    """Full model.
+
+    Parameters:
+    ------------
+    phi_a : tuple of float (0,2pi)
+        longitude of the flare peak in rad
+    theta_a : float (0, pi/2)
+        latitude of the flaring region in rad
+    a : tuple of float >0
+        relative amplitude of the flare
+    fwhm : tuple of float >0
+        FWHM of the flare in fractions of 2pi
+    i : float
+        inclination in rad
+    phi0 : float (0,2pi)
+        longitude that is facing the observer a t=0
+    phi : array of floats >0
+        longitudes
+    num_pts : int
+        number of grid points
+    qlum : astropy Quantity
+        quiescent luminosity in defined band in erg/s
+    Fth : astropy Quantity
+        specific flux of the flare at a given temperature
+        and in a defined band in erg/s/cm^2
+    R : astropy Quantity
+        stellar radius
+    median : float
+        quiescent flux of the light curve
+
+    Return:
+    -------
+    array of floats -  model light curve
+    """
+    ms = []
+    for _phi_a, _a, _fwhm in zip(phi_a,a,fwhm):
+        #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
+        radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
+        # print(radius, "Radius")
+        flare = aflare(phi, _phi_a, _fwhm, _a*median,)
+        #  plt.plot(phi, flare)
+        if radius<10: #deg
+            latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
+        else: 
+            latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
+        lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+        ms.append(m)
+    #plt.plot(phi, m)
+    # print(lamb, np.max(lamb), np.min(lamb))
+    #print(lamb, onoff)
+    m = ms[0]+ms[1]    
     return m + median
 
 
@@ -506,7 +561,6 @@ def calculate_angular_radius(Fth, a, qlum, R):
     """
     
     sin = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
-    print(sin)
     if sin > 1:
         raise ValueError("Flare area seems larger than stellar hemisphere.")
     return np.arcsin(sin).to("deg").value

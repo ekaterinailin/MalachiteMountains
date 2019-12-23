@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .custom_detrending import custom_detrending
+from .helper import fetch_lightcurve
 
 import astropy.units as u
 
