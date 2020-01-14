@@ -67,7 +67,7 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     array of floats -  model light curve
     """
     #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
-    radius = calculate_angular_radius(Fth, a, qlum, R, 0, 0, np.pi/2, phi0=0) # the amplitude is the real one observed from the front
+    radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
     # print(radius, "Radius")
     flare = aflare(phi, phi_a, fwhm, a*median,)
     #  plt.plot(phi, flare)
