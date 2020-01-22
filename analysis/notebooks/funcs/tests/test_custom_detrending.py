@@ -5,7 +5,7 @@ from ..custom_detrending import (#custom_detrending,
                                  select_window_length,
                                  search_gaps_for_window_length,
                                  refine_detrended_flux_err,
-                                 fit_spline,
+                                 #fit_spline,
                                  iteratively_remove_sines)
 
                                  
@@ -201,29 +201,29 @@ def test_select_window_length():
 #     assert flcd.detrended_flux[5001-309] == pytest.approx(np.nanmedian(flux) + 250, abs=110)
 #     assert flcd.detrended_flux[5002-309] == pytest.approx(np.nanmedian(flux) + 150, abs=110)
     
-def test_fit_spline():
-    N = int(1e4)
-    time = np.linspace(2000,2050,N)
-    np.random.seed(2050)
-    flux = (np.sin(time / .08) * 40. + 
-            np.sin(time / .05) * 10. + 
-            1e4 + 
-            np.random.rand(N) * 35. + 
-            5e-4 * ((time-2004.)**3 - 300 * (time-2004)**2))
-    flux[5000:5010] = flux[5000:5010] + np.array([500,250,150,80,60,30,20,10,7,4])
-    flux[4000:4010] = flux[4000:4010] + np.array([400,250,150,80,60,30,20,10,7,4])
-    flux[9000:9010] = flux[9000:9010] + np.array([100,150,50,30,20,10,5,4,3,1])
-    flux[4500:4809] = np.nan
-    flux[7000:8000] = np.nan
-    flux_err = np.random.rand(N) * 35.
-    flc = FlareLightCurve(targetid=10000009, time=time, flux=flux, 
-                          flux_err=flux_err, detrended_flux_err=flux_err,
-                          detrended_flux=flux)
+# def test_fit_spline():
+#     N = int(1e4)
+#     time = np.linspace(2000,2050,N)
+#     np.random.seed(2050)
+#     flux = (np.sin(time / .08) * 40. + 
+#             np.sin(time / .05) * 10. + 
+#             1e4 + 
+#             np.random.rand(N) * 35. + 
+#             5e-4 * ((time-2004.)**3 - 300 * (time-2004)**2))
+#     flux[5000:5010] = flux[5000:5010] + np.array([500,250,150,80,60,30,20,10,7,4])
+#     flux[4000:4010] = flux[4000:4010] + np.array([400,250,150,80,60,30,20,10,7,4])
+#     flux[9000:9010] = flux[9000:9010] + np.array([100,150,50,30,20,10,5,4,3,1])
+#     flux[4500:4809] = np.nan
+#     flux[7000:8000] = np.nan
+#     flux_err = np.random.rand(N) * 35.
+#     flc = FlareLightCurve(targetid=10000009, time=time, flux=flux, 
+#                           flux_err=flux_err, detrended_flux_err=flux_err,
+#                           detrended_flux=flux)
 
-    flcd = fit_spline(flc)
+#     flcd = fit_spline(flc)
 
-    assert flcd.flux.shape[0] == 1e4-309-1e3
-    assert not np.isnan(flcd.flux).any()
+#     assert flcd.flux.shape[0] == 1e4-309-1e3
+#     assert not np.isnan(flcd.flux).any()
     
 def test_iteratively_remove_sines():
     N = int(1e4)

@@ -31,6 +31,7 @@ def no_nan_inf(l):
                 return False
     return True
 
+
 def fetch_lightcurve(target):
     """Read in light curve from file.
 
@@ -49,7 +50,7 @@ def fetch_lightcurve(target):
 
 
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
-                           sector=None,TIC=None):
+                            sector=None, TIC=None):
     '''Read in custom aperture light curve
     from TESS. Needs specific naming convention.
     Applies pre-defined quality masks.
