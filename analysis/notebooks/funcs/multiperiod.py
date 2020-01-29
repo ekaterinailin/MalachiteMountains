@@ -7,7 +7,6 @@ import copy
 import numpy as np
 import pandas as pd
 
-from .custom_detrending import custom_detrending
 from .helper import fetch_lightcurve
 
 import astropy.units as u
@@ -21,8 +20,7 @@ warnings.simplefilter("ignore")
 
 import matplotlib.pyplot as plt
 
-
-
+# We do not test show_flare
 
 def show_flare(target, save=False):
     """Get light curve and plot it."""
@@ -86,7 +84,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
     if plot==True:
 
         # Plot the periodogram
-        pg.plot(label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V \n {period:.2f} h")
+        pg.plot(label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V \n {period:.2f}")
         plt.xlim(minfreq, maxfreq)
 
         # Optionally save to file
@@ -98,7 +96,8 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
 
     return period, pg.frequency_at_max_power
 
-def remove_sinusoidal(target, plot=True, save=False):
+def remove_sinusoidal(target, plot=True, save=False,
+                      period=None, mfp=None):
     """Fit a sinusoidal modulation and
     subtract it from the flux.
 
@@ -110,7 +109,11 @@ def remove_sinusoidal(target, plot=True, save=False):
         If True, will plot the periodogram
     save : bool
         If True, will save periodogram plot to file.
-
+    period : Astropy Quantity in hours
+        rotation period, passed manually, default None
+    mfp : Astropy Quantity in 1/d
+        frequency at max. power, passed manually, default None
+        
     Return:
     -------
     time, subtracted flux, model, period:
@@ -124,7 +127,8 @@ def remove_sinusoidal(target, plot=True, save=False):
     flck = fetch_lightcurve(target)
 
     # Get the dominant modulation period
-    period, mfp = find_period(target, save=False, plot=False)
+    if ((period is None) | (mfp is None)):
+        period, mfp = find_period(target, save=False, plot=False)
 
     # Optimize for the model parameters using
     # non-linear least-squares (Levenberg-Marquardt):
@@ -135,7 +139,8 @@ def remove_sinusoidal(target, plot=True, save=False):
                                       0, 0, np.nanmean(flck.flux)],
                                   method="lm")
     model = cosine(flck.time, p[0], p[1], p[2], p[3], p[4])
-
+    subtracted_flux = np.nanmedian(flck.flux) + flck.flux - model
+    
     # Calculate the relative amplitude of the oscillation
     rel_amplitude = p[0] / np.nanmedian(flck.flux)
     print(f"Relative amplitude of modulation: {rel_amplitude:.1e}")
@@ -156,7 +161,6 @@ def remove_sinusoidal(target, plot=True, save=False):
 
         # Plot the flux with the model subtracted
         offset = (target.view_max - target.view_min) * .3
-        subtracted_flux = np.nanmedian(flck.flux) + flck.flux - model
         plt.plot(flck.time, offset + subtracted_flux,
                  c="r",label="periodic signal subtracted")
 
@@ -168,7 +172,7 @@ def remove_sinusoidal(target, plot=True, save=False):
         plt.xlim(target.view_start,target.view_stop)
         plt.ylim(target.view_min,target.view_max+offset)
         plt.xlabel(f"time [BJD-{int(target.BJDoff)}]",fontsize=14)
-        plt.ylabel("flux [e$^{-}]$",fontsize=14)
+        plt.ylabel("flux [e$^{-} / s]$",fontsize=14)
         plt.legend()
 
         # Save optionally

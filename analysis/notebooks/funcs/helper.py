@@ -44,7 +44,7 @@ def fetch_lightcurve(target):
             f"{target.mission}_{target.typ}_{target.origin}.fits")
 
     flc = read_custom_aperture_lc(path, mission=target.h_mission,
-                                  mode="LC", typ=target.origin,
+                                  mode="LC", typ=target.typ,
                                   TIC=target.ID, sector=target.QCS)
     return flc
 
@@ -52,7 +52,8 @@ def fetch_lightcurve(target):
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
                             sector=None, TIC=None):
     '''Read in custom aperture light curve
-    from TESS. Needs specific naming convention.
+    from TESS or uses AltaiPony's from path for standard 
+    light curves. Needs specific naming convention.
     Applies pre-defined quality masks.
 
     Parameters:

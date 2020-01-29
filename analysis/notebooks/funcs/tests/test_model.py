@@ -167,7 +167,7 @@ def test_dot_ensemble_spherical():
     
     # Let the ensemble cover half a sphere
     p, t = dot_ensemble_spherical(0, 0, 90)
-    assert len(p) == 500001
+    assert len(p) == 4999
     assert len(p) == len(t)
     assert (p < np.pi / 2).all()
     assert (p > -np.pi / 2).all()
@@ -175,7 +175,7 @@ def test_dot_ensemble_spherical():
     assert (t > 0 ).all()
     
     # Look at tiny radii producing only one ...
-    p,t = dot_ensemble_spherical(0, 0, .1)
+    p,t = dot_ensemble_spherical(0, 0, 1)
     assert len(p) == 1
     
     # or no dots at all.

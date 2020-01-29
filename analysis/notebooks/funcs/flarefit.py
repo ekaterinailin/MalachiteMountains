@@ -96,7 +96,8 @@ def log_prior(theta, i_mu=None, i_sigma=None, phi_a_min=0,
 def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """Log likelihood function assuming
     Gaussian uncertainties in the data points.
-    SHOULDNT THIS BE POISSON?
+    SHOULDNT THIS BE POISSON? No, because flux_err is not exactly sqrt(n), 
+    and above several hundred counts
     """
 
     phi_a, theta_a, a, fwhm, i, phi0 = theta
