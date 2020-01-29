@@ -14,7 +14,56 @@ from ..model import (aflare,
                      dot_ensemble_circular,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
-                     lightcurve_model)
+                     lightcurve_model,
+                     full_model)
+
+# ---------------------- TESTING full_model(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)       
+
+def test_full_model():
+
+    phi_a = 6.1
+    theta_a = 50./180*np.pi
+    a = 1.
+    fwhm = 1.5
+    i = 50./180*np.pi
+    Fth=1e13 * u.erg/u.s/(u.cm**2)
+    qlum=1e32 *u.erg/u.s
+    R=.09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+    # Amplitude 0 gives zero excess flux
+
+    a = 0
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+
+    a = 1.
+    theta_a=np.pi/2
+    i = 0
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a,rel=0.01)
+
 
 
 # ---------------------- TESTING aflare(t, tpeak, dur, ampl, upsample=False, uptime=10) ---------------

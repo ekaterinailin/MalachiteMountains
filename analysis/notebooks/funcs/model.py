@@ -69,20 +69,17 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     -------
     array of floats -  model light curve
     """
-    #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
-    # print(radius, "Radius")
+
     flare = aflare(phi, phi_a, fwhm, a*median,)
-    #  plt.plot(phi, flare)
+
     if radius<10: #deg
         latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
     else: 
         latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
 
     lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
-    #plt.plot(phi, m)
-    #print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
+    
     return m + median
 
 def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
@@ -125,20 +122,18 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
     """
     ms = []
     for _phi_a, _a, _fwhm in zip(phi_a,a,fwhm):
-        #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
+        
         radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
-        # print(radius, "Radius")
+        
         flare = aflare(phi, _phi_a, _fwhm, _a*median,)
-        #  plt.plot(phi, flare)
+        
         if radius<10: #deg
             latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
         else: 
             latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
         lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
         ms.append(m)
-    #plt.plot(phi, m)
-    # print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
+
     m = ms[0]+ms[1]    
     return m + median
 
