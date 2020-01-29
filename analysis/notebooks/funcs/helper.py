@@ -9,6 +9,9 @@ import sys, os
 
 CWD = "/".join(os.getcwd().split("/")[:-2])
 
+
+# We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
+
 def no_nan_inf(l):
     """Check arguments in list for Inf and NaN.
     Return True if all values are finite, and not NaN.
@@ -87,25 +90,25 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     return flc
 
 
-def get_window_length_dict():
-    l15 = [(x, 15) for x in   [44984200]]
-    l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
-                               29780677, 340703996, 395130640, 441000085, 
-                               53603145, 144776281,]]
-    l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
-                               272349442, 277539431, 293561794, 369555560,
-                               464378628]]
-    l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
-                               420001446]]
-    l115 = [(x, 115) for x in [328254412,]]
-    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
-                               398985964, 322568489, 2470992, 1539914,
-                               117733581, 73118477]]
-    L = [l15, l25, l55, l75, l115,l555]
-    L = [x for a in L for x in a]
-    l = dict(L)
-    assert len(l) == len(L)
-    return l
+# def get_window_length_dict():
+#     l15 = [(x, 15) for x in   [44984200]]
+#     l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
+#                                29780677, 340703996, 395130640, 441000085, 
+#                                53603145, 144776281,]]
+#     l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
+#                                272349442, 277539431, 293561794, 369555560,
+#                                464378628]]
+#     l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
+#                                420001446]]
+#     l115 = [(x, 115) for x in [328254412,]]
+#     l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
+#                                398985964, 322568489, 2470992, 1539914,
+#                                117733581, 73118477]]
+#     L = [l15, l25, l55, l75, l115,l555]
+#     L = [x for a in L for x in a]
+#     l = dict(L)
+#     assert len(l) == len(L)
+#     return l
 
 
 
