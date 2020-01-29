@@ -2,17 +2,76 @@ import pytest
 import numpy as np
 
 import astropy.units as u
-from astropy.constants import  R_sun
+from astropy.constants import  R_sun, b_wien
 
-from ..model import (daylength,
+from ..model import (aflare,
+                     daylength,
                      on_off,
                      lambert,
+                     black_body_spectrum,
                      great_circle_distance,
                      dot_ensemble_spherical,
                      dot_ensemble_circular,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
                      lightcurve_model)
+
+
+# ---------------------- TESTING aflare(t, tpeak, dur, ampl, upsample=False, uptime=10) ---------------
+# The same tests as in AltaiPony
+
+def test_aflare_and_equivalent_duration():
+
+    n = 1000
+    time = np.arange(0, n/48, 1./48.)
+    x = time * 60.0 * 60.0 * 24.0
+
+    # Test a large flare without upsampling
+    fl_flux = aflare(time, 11.400134, 1.415039, 110.981950)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    
+    # Test a flare with 0 amplitude
+    fl_flux = aflare(time, 11.400134, 1.415039, 0)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == 0.
+
+    # test a large flare with upsampling
+    fl_flux = aflare(time, 11.400134, 1.415039, 110.981950, upsample=True)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    
+    
+    # Test a smaller undersampled flare
+    fl_flux = aflare(time, 11.400134, 1/48., 1.0)
+    x = time * 60.0 * 60.0 * 24.0
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1453.1179,rel=1e-2)
+    
+    # Test the amplitude
+    fl_flux = aflare(time, 1.734, 15, 1.0)
+    assert np.max(fl_flux) == pytest.approx(1,rel=1e-2)
+
+# ---------------------------- TESTING black_body_spectrum(wav, T) ------------------------------------- 
+
+def test_black_body_spectrum():
+    
+    # Construct a wavelength array:
+    wav = np.linspace(300,900,3000)*u.nm
+
+    # T=0K should give 0 flux
+
+    t = 0
+    bbs =  black_body_spectrum(wav, t)
+    assert bbs.unit == u.erg / u.s / u.cm**3
+    assert (bbs.value == np.full(3000,0)).all()
+
+    # Test a Sun-like star
+
+    t = 5900
+    lmaxf = wav[np.argmax(black_body_spectrum(wav, t))]
+    lmax = b_wien / (t * u.K) 
+    assert lmax.to("nm").value == pytest.approx(lmaxf.value, rel=1e-3)
 
 # ----------- TESTING calculate_angular_radius(Fth, a, qlum, R, lat, lon, i, phi=0) ------- Fth, a, qlum, R
 
@@ -188,7 +247,7 @@ def test_dot_ensemble_spherical():
         
 ## ------------- TESTING  lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
         
-def test_model():
+def test_lightcurve_model():
     
     # Set up a mock data set:
     phi = np.linspace(0,np.pi*2, 10)

@@ -4,8 +4,10 @@ import pandas as pd
 from .helper import no_nan_inf, create_spherical_grid
 
 import astropy.units as u
-
 from astropy.constants import c, h, k_B, R_sun, L_sun
+
+from scipy.stats import binned_statistic
+
 
 #import matplotlib.pyplot as plt
 
