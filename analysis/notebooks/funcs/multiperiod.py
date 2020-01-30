@@ -98,7 +98,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
 
     return period, pg.frequency_at_max_power
 
-def remove_sinusoidal(target, plot=True, save=False):
+def remove_sinusoidal(target, plot=True, save=False, cut=None):
     """Fit a sinusoidal modulation and
     subtract it from the flux.
 
@@ -129,6 +129,8 @@ def remove_sinusoidal(target, plot=True, save=False):
     # Optimize for the model parameters using
     # non-linear least-squares (Levenberg-Marquardt):
     cond = np.invert(np.isnan(flck.time)) & np.invert(np.isnan(flck.flux))
+    if cut is not None:
+        cond = cond & (flck.time > cut[0]) & (flck.time < cut[1])
     p, p_cov = optimize.curve_fit(cosine, flck.time[cond],
                                   flck.flux[cond],
                                   p0=[np.nanstd(flck.flux), 2 * np.pi * mfp.value,
