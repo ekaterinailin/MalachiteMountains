@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 
@@ -138,7 +140,8 @@ def fix_mask(flc):
     if flc.campaign in masks.keys():
         for sta, fin in masks[flc.campaign]:
             flc.flux[np.where((flc.cadenceno >= sta) & (flc.cadenceno <= fin))] = np.nan
-            
+    else:
+        warnings.warn(f"Campaign {flc.campaign} has no defined custom masks.")
     flc.quality[:] = np.isnan(flc.flux)
     return flc
 
@@ -149,10 +152,19 @@ def create_spherical_grid(num_pts):
     https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
     answered by CR Drost
     
+    Coversion to cartesian coordinates:
+    x = np.cos(theta) * np.sin(phi)
+    y = np.sin(theta) * np.sin(phi)
+    z = np.cos(phi);
+    
     Parameters:
     -----------
     num_pts : int
         number of grid points on the full sphere
+        
+    Return:
+    --------
+    phi, theta - numpy arrays of latitude, longitude
     """
     
     # This is CR Drost's solution to the sunflower spiral:
@@ -161,7 +173,16 @@ def create_spherical_grid(num_pts):
     theta = np.pi * (1 + 5**0.5) * indices #longitude
 
     # Fold onto on sphere
-    phi = np.pi / 2 - phi % (2 * np.pi)
+    phi = (np.pi/2 - phi) % (2 * np.pi) # 0th  stars at the equator
+    # 2nd quadrant
+    q = np.where((np.pi/2 < phi) & (phi < np.pi))
+    phi[q] = np.pi-phi[q]
+    # 3rd quadrant
+    q = np.where((np.pi < phi) & (1.5*np.pi > phi))
+    phi[q] = -(phi[q] - np.pi)
+    # 4th quadrant
+    q = np.where((1.5*np.pi < phi) & (2*np.pi > phi))
+    phi[q] = phi[q] - np.pi*2
     theta = theta % (np.pi * 2)
     
     return phi, theta

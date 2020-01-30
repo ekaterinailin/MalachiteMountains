@@ -34,6 +34,9 @@ def uninformative_prior(rate, minrate, maxrate):
     Return:
         Prior probability
     '''
+    condition = ~(np.isfinite(maxrate) & np.isfinite(minrate))
+    if ((maxrate < minrate) | condition):
+        raise ValueError("maxrate must be > minrate, and a finite value")
     if ((rate >= minrate) & (rate <= maxrate)):
         return 1. / (maxrate - minrate)
     else:
@@ -43,10 +46,19 @@ def uninformative_prior(rate, minrate, maxrate):
 @logit
 def gaussian_prior(x, mu, sigma):
     '''Evaluate a normalized Gaussian function
-    with mu and sigma at x. NOT TESTED.'''
-    if x > np.pi/2:
+    with mu and sigma at latitude x.
+    
+    Parameters:
+    ------------
+    x : float
+        latitude between -pi/2 and pi/2
+    '''
+    if (np.abs(x) > np.pi/2):
+        print("O")
         return 0
     else:
+        print(1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2)))
+
         return  1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2))
 
 

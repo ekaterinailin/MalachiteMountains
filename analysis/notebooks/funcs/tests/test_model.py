@@ -15,7 +15,119 @@ from ..model import (aflare,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
                      lightcurve_model,
-                     full_model)
+                     full_model,
+                     full_model_2flares,
+                     full_model_2flares2ars,)
+
+# ---------------------- TESTING full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)   
+
+def test_full_model_2flares2ars(): 
+    
+    phi_a = (6.1, 7.1)
+    theta_a = (50./180*np.pi, 70./180.*np.pi)
+    a = (1., .7)
+    fwhm = (1.5, 0.8)
+    i = 50./180*np.pi
+    Fth = 1e13 * u.erg/u.s/(u.cm**2)
+    qlum = 1e32 *u.erg/u.s
+    R = .09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+
+    # Amplitude 0 gives zero excess flux
+
+    a = (0.,0.)
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+    a = (1.,.7)
+    theta_a=(np.pi/2, np.pi/2)
+    
+    i = 0
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
+    
+    # Pole on view and equator flare
+
+    a = (1.,.7)
+    theta_a=(0,0)
+    i = 0
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+    assert np.max(m) == pytest.approx(10.6,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
+    
+
+# ---------------------- TESTING full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)     
+
+def test_full_model_2flares(): 
+    phi_a = (6.1, 7.1)
+    theta_a = 50./180*np.pi
+    a = (1., .7)
+    fwhm = (1.5, 0.8)
+    i = 50./180*np.pi
+    Fth = 1e13 * u.erg/u.s/(u.cm**2)
+    qlum = 1e32 *u.erg/u.s
+    R = .09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+
+    # Amplitude 0 gives zero excess flux
+
+    a = (0.,0.)
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+
+    a = (1.,.7)
+    theta_a=np.pi/2
+    i = 0
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
 
 # ---------------------- TESTING full_model(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
 #                                           phi=None, num_pts=100, qlum=None,
