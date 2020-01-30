@@ -1,11 +1,13 @@
 import numpy as np
+import pandas as pd
 
 import pytest
 
 from ..helper import (no_nan_inf,
                       read_custom_aperture_lc,
                       create_spherical_grid,
-                      fix_mask)
+                      fix_mask,
+                      calculate_inclination)
 
 from astropy.io import fits
 
@@ -16,6 +18,29 @@ import os
 CWD = "/".join(os.getcwd().split("/")[:-2])
 
 # We don't test fetch_lightcurve, because it's just a wrapper for read_custom_aperture
+
+# ----------------------------- TESTING calculate_inclination(s) --------------------
+
+def test_calculate_inclination():
+    
+    # Create some data to test:
+    df = pd.DataFrame({"rad":[.1, np.nan, .1, .1],
+                   "rad_err":[.005, .005, 0.005, 0.],
+                   "Prot_d":[.2, .2, .2, .2],
+                   "vsini":[15, 15, 45, 15],
+                   "e_vsini":[2, 2, 2, 0],
+                    "i":[36.3680921216061, np.nan,np.nan,36.3680921216061],
+                   "ei":[6.008265950596777,np.nan,np.nan,0.]})
+    
+    # run on all rows
+    for i, s in df.iterrows():
+        i, ei = calculate_inclination(s)
+        if np.isnan(i):
+            assert np.isnan(s.i)
+            assert np.isnan(s.ei)
+        else:
+            assert i.value == s.i
+            assert ei.value == s.ei
 
 # -------------------------------- TESTING fix_mask(flc) ----------------------------
 

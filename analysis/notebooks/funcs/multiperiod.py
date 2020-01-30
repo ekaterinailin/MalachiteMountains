@@ -135,8 +135,8 @@ def remove_sinusoidal(target, plot=True, save=False,
     # Optimize for the model parameters using
     # non-linear least-squares (Levenberg-Marquardt):
     cond = np.invert(np.isnan(flck.time)) & np.invert(np.isnan(flck.flux))
-    if cut is not None:
-        cond = cond & (flck.time > cut[0]) & (flck.time < cut[1])
+#     if cut is not None:
+#         cond = cond & (flck.time > cut[0]) & (flck.time < cut[1])
     p, p_cov = optimize.curve_fit(cosine, flck.time[cond],
                                   flck.flux[cond],
                                   p0=[np.nanstd(flck.flux), 2 * np.pi * mfp.value,

@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 
 from astropy.io import fits
+from astropy.constants import R_sun
+import astropy.units as u
+
 from altaipony.flarelc import FlareLightCurve
 from altaipony.lcio import from_path
 
@@ -92,27 +95,6 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     return flc
 
 
-# def get_window_length_dict():
-#     l15 = [(x, 15) for x in   [44984200]]
-#     l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
-#                                29780677, 340703996, 395130640, 441000085, 
-#                                53603145, 144776281,]]
-#     l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
-#                                272349442, 277539431, 293561794, 369555560,
-#                                464378628]]
-#     l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
-#                                420001446]]
-#     l115 = [(x, 115) for x in [328254412,]]
-#     l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
-#                                398985964, 322568489, 2470992, 1539914,
-#                                117733581, 73118477]]
-#     L = [l15, l25, l55, l75, l115,l555]
-#     L = [x for a in L for x in a]
-#     l = dict(L)
-#     assert len(l) == len(L)
-#     return l
-
-
 
 def fix_mask(flc):
     '''Here the masks for different TESS 
@@ -186,3 +168,40 @@ def create_spherical_grid(num_pts):
     theta = theta % (np.pi * 2)
     
     return phi, theta
+
+
+def calculate_inclination(s):
+    """Determine the inclination
+    vsini, stellar radius, and rotation
+    period.
+    
+    Parameters:
+    -----------
+    s : pandas Series
+        contains "rad", "rad_err", "Prot_d",
+        "vsini", and "e_vsini". No uncertainties
+        on "P".
+    
+    Return:
+    -------
+    inclination, uncertainty on inclination - 
+        astropy Quantities
+    """
+    R, P, vsini = s.rad * R_sun, s.Prot_d * u.d, s.vsini * u.km / u.s
+    eR, eP, evsini = s.rad_err * R_sun, 0 * u.d, s.e_vsini * u.km / u.s
+
+    sini = vsini * P / 2 / np.pi / R
+    incl = np.arcsin(sini)
+
+    _a = vsini / 2 / np.pi / R
+    sigP_squared = (_a / np.sqrt(1 - (_a * P)**2))**2 * eP**2
+
+    _b = P / 2 / np.pi / R
+    sigvsini_squared = (_b / np.sqrt(1 - (_b * vsini)**2))**2 * evsini**2
+
+    _c = vsini * P / 2 / np.pi
+    sigR_squared = ( - _c / R**2 / np.sqrt(1 - (_c / R)**2))**2 * eR**2 
+
+    eincl = np.sqrt(sigP_squared + sigR_squared + sigvsini_squared).decompose()*u.rad
+
+    return incl.to("deg"), eincl.to("deg")
