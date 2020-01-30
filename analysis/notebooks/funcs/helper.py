@@ -179,7 +179,7 @@ def calculate_inclination(s):
     -----------
     s : pandas Series
         contains "rad", "rad_err", "Prot_d",
-        "vsini", and "e_vsini". No uncertainties
+        "vsini_kms", and "e_vsini_kms". No uncertainties
         on "P".
     
     Return:
@@ -187,8 +187,8 @@ def calculate_inclination(s):
     inclination, uncertainty on inclination - 
         astropy Quantities
     """
-    R, P, vsini = s.rad * R_sun, s.Prot_d * u.d, s.vsini * u.km / u.s
-    eR, eP, evsini = s.rad_err * R_sun, 0 * u.d, s.e_vsini * u.km / u.s
+    R, P, vsini = s.rad * R_sun, s.Prot_d * u.d, s.vsini_kms * u.km / u.s
+    eR, eP, evsini = s.rad_err * R_sun, 0 * u.d, s.e_vsini_kms * u.km / u.s
 
     sini = vsini * P / 2 / np.pi / R
     incl = np.arcsin(sini)

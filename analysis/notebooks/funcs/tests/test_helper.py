@@ -27,8 +27,8 @@ def test_calculate_inclination():
     df = pd.DataFrame({"rad":[.1, np.nan, .1, .1],
                    "rad_err":[.005, .005, 0.005, 0.],
                    "Prot_d":[.2, .2, .2, .2],
-                   "vsini":[15, 15, 45, 15],
-                   "e_vsini":[2, 2, 2, 0],
+                   "vsini_kms":[15, 15, 45, 15],
+                   "e_vsini_kms":[2, 2, 2, 0],
                     "i":[36.3680921216061, np.nan,np.nan,36.3680921216061],
                    "ei":[6.008265950596777,np.nan,np.nan,0.]})
     
