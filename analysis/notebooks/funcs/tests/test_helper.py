@@ -1,7 +1,101 @@
 import numpy as np
+
 import pytest
 
-from ..helper import no_nan_inf
+from ..helper import (no_nan_inf,
+                      read_custom_aperture_lc,
+                      create_spherical_grid,
+                      fix_mask)
+
+from astropy.io import fits
+
+from altaipony.flarelc import FlareLightCurve
+
+import os
+
+CWD = "/".join(os.getcwd().split("/")[:-2])
+
+# We don't test fetch_lightcurve, because it's just a wrapper for read_custom_aperture
+
+# -------------------------------- TESTING fix_mask(flc) ----------------------------
+
+def test_fix_mask():
+    # Select cadenceno range
+    start, stop = int(1e5),int(3e5)
+
+    # Define light curve
+    c = np.arange(start, stop)
+    t = np.linspace(1000,1030,stop-start)
+    f = np.random.rand(stop-start)
+    flc = FlareLightCurve(time=t, flux=f, cadenceno=c, campaign=10)
+
+    # Call function
+    flcc = fix_mask(flc)
+
+    # Do some checks
+    res = flcc.cadenceno[np.isnan(flcc.flux)] 
+    assert (((res >= 246227) & (res <= 247440)) | ((res >= 255110) & (res <= 257370))).all()
+
+
+    # A different case where the campaign has no custom mask
+    c = np.arange(start, stop)
+    t = np.linspace(1000,1030,stop-start)
+    f = np.random.rand(stop-start)
+    flc2 = FlareLightCurve(time=t, flux=f, cadenceno=c, campaign=18)
+    flcc2 = fix_mask(flc2)
+    assert (np.isnan(flcc2.flux) == False).all()
+
+# -------------------------------- TESTING create_spherical_grid(num_pts) ----------------------------
+
+def test_create_spherical_grid():
+    
+    # Create a small grid
+    phi, theta = create_spherical_grid(10)
+    
+    # Do explicit check of results
+    assert phi == pytest.approx(np.array([ 1.11976951,  0.7753975 ,  0.52359878,  0.30469265,  0.10016742,
+       -0.10016742, -0.30469265, -0.52359878, -0.7753975 , -1.11976951]))
+    assert theta == pytest.approx(np.array([5.08320369, 2.68324046, 0.28327723, 4.16649931, 1.76653608,
+       5.64975816, 3.24979493, 0.8498317 , 4.73305378, 2.33309055]))
+    
+    # Create a somewhat larger grid
+    phi, theta = create_spherical_grid(10000)
+    
+    # Do a somewhat more informative check on whether 
+    # the algorithm still does the same thing as before
+    x,y,z = np.cos(theta) * np.sin(phi), np.sin(theta) * np.sin(phi), np.cos(phi);
+    dist = []
+    for i in range(9999): # get folde distances between subsequent data points
+        dist.append(np.sqrt((x[i]-x[i+1])**2 + (y[i]-y[i+1])**2 + (z[i]-z[i+1])**2))
+   
+    assert np.max(dist) == pytest.approx(1.8637, rel=1e-4) # that's because the values are going in spirals
+    del dist
+    del phi, theta
+
+def test_read_custom_aperture_lc():
+    
+    # Create a light curve with a sinusoidal modulation
+    hdr = fits.Header()
+    hdr['OBSERVER'] = 'Mike'
+    hdr['COMMENT'] = "Here's some commentary about this FITS file."
+    start, stop, N = 1000, 1020, 1000
+    c1 = fits.Column(name='TIME', array=np.linspace(start, stop, N), format='F10.4')
+    c2 = fits.Column(name='FLUX', array=400 + 50*np.sin(np.linspace(start, stop, N)*2), format='F10.4')
+    c3 = fits.Column(name='FLUX_ERR', array= 20*np.random.rand(N), format='F10.4')
+    c4 = fits.Column(name='QUALITY', array= np.full(N,1), format='K')
+    c5 = fits.Column(name='CADENCENO', array= np.arange(100,N+100), format='K')
+    hdu = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5], header=hdr)
+    PATH = f"{CWD}/analysis/notebooks/funcs/tests/test.fits"
+    hdu.writeto(PATH,overwrite=True)
+    
+    # Call the function
+    flc = read_custom_aperture_lc(PATH, typ="custom", mission="TESS", mode="LC",
+                                sector=10, TIC=1000)
+    # Do some checks
+    assert (flc.flux == 400 + 50*np.sin(np.linspace(start, stop, N)*2)).all()
+    assert (flc.time == np.linspace(start, stop, N)).all()
+    assert flc.campaign == 10
+    assert flc.targetid == 1000
 
 cases = [((0, 0, np.nan), False),
          ((0, 0, 0), True), 

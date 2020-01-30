@@ -4,15 +4,18 @@ import pandas as pd
 from .helper import no_nan_inf, create_spherical_grid
 
 import astropy.units as u
-
 from astropy.constants import c, h, k_B, R_sun, L_sun
+
+from scipy.stats import binned_statistic
+
 
 #import matplotlib.pyplot as plt
 
 # Read in response curve ---------------------------------------------
 
-response_curve = {"TESS":"TESS.txt",
-                  "Kepler":"kepler_lowres.txt"}
+response_curve = {"TESS" : "TESS.txt",
+                  "Kepler" : "kepler_lowres.txt"}
+
 for key, val in response_curve.items():
     df = pd.read_csv(f"static/{val}",
                      delimiter="\s+", skiprows=8)
@@ -23,10 +26,10 @@ for key, val in response_curve.items():
     
 #----------------------------------------------------------------------
 
-
 # Create a spherical grid only one for the entire analysis ------------
 
-PHI, THETA = create_spherical_grid(int(1e4))
+PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
+
 #----------------------------------------------------------------------
 
 def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
@@ -66,26 +69,24 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     -------
     array of floats -  model light curve
     """
-    #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
-    # print(radius, "Radius")
+
     flare = aflare(phi, phi_a, fwhm, a*median,)
-    #  plt.plot(phi, flare)
+
     if radius<10: #deg
         latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
     else: 
         latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
 
     lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
-    #plt.plot(phi, m)
-    # print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
+    
     return m + median
 
 def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
-    """Full model.
+    """Full model in the case of two flares that
+    originate from the same active region.
 
     Parameters:
     ------------
@@ -121,20 +122,18 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
     """
     ms = []
     for _phi_a, _a, _fwhm in zip(phi_a,a,fwhm):
-        #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
+        
         radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
-        # print(radius, "Radius")
+        
         flare = aflare(phi, _phi_a, _fwhm, _a*median,)
-        #  plt.plot(phi, flare)
+        
         if radius<10: #deg
             latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
         else: 
             latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
         lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
         ms.append(m)
-    #plt.plot(phi, m)
-    # print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
+
     m = ms[0]+ms[1]    
     return m + median
 
@@ -142,7 +141,8 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
 def full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
-    """Full model.
+    """Full model in the case of two flares that
+    originate from two different active regions.
 
     Parameters:
     ------------
@@ -325,9 +325,9 @@ def dot_ensemble_circular(lat, lon, radius, num_pts=100):
     return lats, lons, (x,y,z)
 
 
-def dot_ensemble_spherical(lat, lon, radius, phi=PHI, theta=THETA):
+def dot_ensemble_spherical(lat, lon, radius):
     """Create an ensemble of dots on a sphere. Use the pre-defined
-    grid in phi and theta
+    grid in phi and theta.
 
     Parameters:
     -----------
@@ -337,10 +337,7 @@ def dot_ensemble_spherical(lat, lon, radius, phi=PHI, theta=THETA):
         longitude of center of ensemble in rad
     radius : float
         angular radius of the ensemble in deg
-    phi : array of float
-        latitudes of grid points
-    theta : array of floats 
-        longitudes of grid points
+
 
     Return:
     -------
@@ -353,11 +350,11 @@ def dot_ensemble_spherical(lat, lon, radius, phi=PHI, theta=THETA):
                          " or contains NaN or Inf.")
 
     # Calculate the distance of the dots to the center of the ensemble
-    gcs = great_circle_distance(lat, lon, phi, theta)
+    gcs = great_circle_distance(lat, lon, PHI, THETA)
 
     # If distance is small enough, include in ensemble
     a = np.where(gcs < (radius * np.pi / 180))[0]
-    return phi[a], theta[a]
+    return PHI[a], THETA[a]
 
 
 def great_circle_distance(a, la, b, lb):
@@ -438,7 +435,7 @@ def on_off(phi, daylength, phi0=0.):
     else bool, True=visible, False=hidden
 
     """
-    def condition(phi,phi0,daylength):
+    def condition(phi, phi0, daylength):
 
         # condition for being hidden on the back of the star
         if daylength==0.:

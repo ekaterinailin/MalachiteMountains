@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 
@@ -8,6 +10,9 @@ from altaipony.lcio import from_path
 import sys, os
 
 CWD = "/".join(os.getcwd().split("/")[:-2])
+
+
+# We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
 
 def no_nan_inf(l):
     """Check arguments in list for Inf and NaN.
@@ -31,6 +36,7 @@ def no_nan_inf(l):
                 return False
     return True
 
+
 def fetch_lightcurve(target):
     """Read in light curve from file.
 
@@ -43,15 +49,16 @@ def fetch_lightcurve(target):
             f"{target.mission}_{target.typ}_{target.origin}.fits")
 
     flc = read_custom_aperture_lc(path, mission=target.h_mission,
-                                  mode="LC", typ=target.origin,
+                                  mode="LC", typ=target.typ,
                                   TIC=target.ID, sector=target.QCS)
     return flc
 
 
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
-                           sector=None,TIC=None):
+                            sector=None, TIC=None):
     '''Read in custom aperture light curve
-    from TESS. Needs specific naming convention.
+    from TESS or uses AltaiPony's from path for standard 
+    light curves. Needs specific naming convention.
     Applies pre-defined quality masks.
 
     Parameters:
@@ -85,25 +92,25 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     return flc
 
 
-def get_window_length_dict():
-    l15 = [(x, 15) for x in   [44984200]]
-    l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
-                               29780677, 340703996, 395130640, 441000085, 
-                               53603145, 144776281,]]
-    l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
-                               272349442, 277539431, 293561794, 369555560,
-                               464378628]]
-    l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
-                               420001446]]
-    l115 = [(x, 115) for x in [328254412,]]
-    l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
-                               398985964, 322568489, 2470992, 1539914,
-                               117733581, 73118477]]
-    L = [l15, l25, l55, l75, l115,l555]
-    L = [x for a in L for x in a]
-    l = dict(L)
-    assert len(l) == len(L)
-    return l
+# def get_window_length_dict():
+#     l15 = [(x, 15) for x in   [44984200]]
+#     l25 = [(x, 25) for x in   [98874143, 388903843, 332623751, 44892011, 
+#                                29780677, 340703996, 395130640, 441000085, 
+#                                53603145, 144776281,]]
+#     l55 = [(x, 55) for x in   [471012770, 5630425, 140478472, 142052876,
+#                                272349442, 277539431, 293561794, 369555560,
+#                                464378628]]
+#     l75 = [(x, 75) for x in   [29928567,298907057, 366567664, 369863567,
+#                                420001446]]
+#     l115 = [(x, 115) for x in [328254412,]]
+#     l555 = [(x, 555) for x in [471012740, 125835702, 30101427, 415839928, 
+#                                398985964, 322568489, 2470992, 1539914,
+#                                117733581, 73118477]]
+#     L = [l15, l25, l55, l75, l115,l555]
+#     L = [x for a in L for x in a]
+#     l = dict(L)
+#     assert len(l) == len(L)
+#     return l
 
 
 
@@ -133,7 +140,8 @@ def fix_mask(flc):
     if flc.campaign in masks.keys():
         for sta, fin in masks[flc.campaign]:
             flc.flux[np.where((flc.cadenceno >= sta) & (flc.cadenceno <= fin))] = np.nan
-            
+    else:
+        warnings.warn(f"Campaign {flc.campaign} has no defined custom masks.")
     flc.quality[:] = np.isnan(flc.flux)
     return flc
 
@@ -144,10 +152,19 @@ def create_spherical_grid(num_pts):
     https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
     answered by CR Drost
     
+    Coversion to cartesian coordinates:
+    x = np.cos(theta) * np.sin(phi)
+    y = np.sin(theta) * np.sin(phi)
+    z = np.cos(phi);
+    
     Parameters:
     -----------
     num_pts : int
         number of grid points on the full sphere
+        
+    Return:
+    --------
+    phi, theta - numpy arrays of latitude, longitude
     """
     
     # This is CR Drost's solution to the sunflower spiral:
@@ -156,7 +173,16 @@ def create_spherical_grid(num_pts):
     theta = np.pi * (1 + 5**0.5) * indices #longitude
 
     # Fold onto on sphere
-    phi = np.pi / 2 - phi % (2 * np.pi)
+    phi = (np.pi/2 - phi) % (2 * np.pi) # 0th  stars at the equator
+    # 2nd quadrant
+    q = np.where((np.pi/2 < phi) & (phi < np.pi))
+    phi[q] = np.pi-phi[q]
+    # 3rd quadrant
+    q = np.where((np.pi < phi) & (1.5*np.pi > phi))
+    phi[q] = -(phi[q] - np.pi)
+    # 4th quadrant
+    q = np.where((1.5*np.pi < phi) & (2*np.pi > phi))
+    phi[q] = phi[q] - np.pi*2
     theta = theta % (np.pi * 2)
     
     return phi, theta

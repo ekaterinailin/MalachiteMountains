@@ -2,17 +2,237 @@ import pytest
 import numpy as np
 
 import astropy.units as u
-from astropy.constants import  R_sun
+from astropy.constants import  R_sun, b_wien
 
-from ..model import (daylength,
+from ..model import (aflare,
+                     daylength,
                      on_off,
                      lambert,
+                     black_body_spectrum,
                      great_circle_distance,
                      dot_ensemble_spherical,
                      dot_ensemble_circular,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
-                     lightcurve_model)
+                     lightcurve_model,
+                     full_model,
+                     full_model_2flares,
+                     full_model_2flares2ars,)
+
+# ---------------------- TESTING full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)   
+
+def test_full_model_2flares2ars(): 
+    
+    phi_a = (6.1, 7.1)
+    theta_a = (50./180*np.pi, 70./180.*np.pi)
+    a = (1., .7)
+    fwhm = (1.5, 0.8)
+    i = 50./180*np.pi
+    Fth = 1e13 * u.erg/u.s/(u.cm**2)
+    qlum = 1e32 *u.erg/u.s
+    R = .09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+
+    # Amplitude 0 gives zero excess flux
+
+    a = (0.,0.)
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+    a = (1.,.7)
+    theta_a=(np.pi/2, np.pi/2)
+    
+    i = 0
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
+    
+    # Pole on view and equator flare
+
+    a = (1.,.7)
+    theta_a=(0,0)
+    i = 0
+    m = full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+    assert np.max(m) == pytest.approx(10.6,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
+    
+
+# ---------------------- TESTING full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)     
+
+def test_full_model_2flares(): 
+    phi_a = (6.1, 7.1)
+    theta_a = 50./180*np.pi
+    a = (1., .7)
+    fwhm = (1.5, 0.8)
+    i = 50./180*np.pi
+    Fth = 1e13 * u.erg/u.s/(u.cm**2)
+    qlum = 1e32 *u.erg/u.s
+    R = .09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+
+    # Amplitude 0 gives zero excess flux
+
+    a = (0.,0.)
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+
+    a = (1.,.7)
+    theta_a=np.pi/2
+    i = 0
+    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
+
+# ---------------------- TESTING full_model(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
+#                                           phi=None, num_pts=100, qlum=None,
+#                                           Fth=None, R=None, median=0)       
+
+def test_full_model():
+
+    phi_a = 6.1
+    theta_a = 50./180*np.pi
+    a = 1.
+    fwhm = 1.5
+    i = 50./180*np.pi
+    Fth=1e13 * u.erg/u.s/(u.cm**2)
+    qlum=1e32 *u.erg/u.s
+    R=.09* R_sun
+    phi = np.linspace(0,20,3000)
+
+    # Initial version:
+
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+
+
+    assert np.max(m) == pytest.approx(20,rel=.1)
+    assert len(m) == 3000
+
+    # Amplitude 0 gives zero excess flux
+
+    a = 0
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == 10
+    assert len(m) == 3000
+
+    # Pole on view and pole on flare
+
+    a = 1.
+    theta_a=np.pi/2
+    i = 0
+    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+                  phi=phi, num_pts=100, qlum=qlum,
+                  Fth=Fth, R=R, median=10)
+    assert np.max(m) == pytest.approx(20,rel=.05)
+    assert len(m) == 3000
+    assert phi[np.argmax(m)] == pytest.approx(phi_a,rel=0.01)
+
+
+
+# ---------------------- TESTING aflare(t, tpeak, dur, ampl, upsample=False, uptime=10) ---------------
+# The same tests as in AltaiPony
+
+def test_aflare_and_equivalent_duration():
+
+    n = 1000
+    time = np.arange(0, n/48, 1./48.)
+    x = time * 60.0 * 60.0 * 24.0
+
+    # Test a large flare without upsampling
+    fl_flux = aflare(time, 11.400134, 1.415039, 110.981950)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    
+    # Test a flare with 0 amplitude
+    fl_flux = aflare(time, 11.400134, 1.415039, 0)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == 0.
+
+    # test a large flare with upsampling
+    fl_flux = aflare(time, 11.400134, 1.415039, 110.981950, upsample=True)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    
+    
+    # Test a smaller undersampled flare
+    fl_flux = aflare(time, 11.400134, 1/48., 1.0)
+    x = time * 60.0 * 60.0 * 24.0
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(1453.1179,rel=1e-2)
+    
+    # Test the amplitude
+    fl_flux = aflare(time, 1.734, 15, 1.0)
+    assert np.max(fl_flux) == pytest.approx(1,rel=1e-2)
+
+# ---------------------------- TESTING black_body_spectrum(wav, T) ------------------------------------- 
+
+def test_black_body_spectrum():
+    
+    # Construct a wavelength array:
+    wav = np.linspace(300,900,3000)*u.nm
+
+    # T=0K should give 0 flux
+
+    t = 0
+    bbs =  black_body_spectrum(wav, t)
+    assert bbs.unit == u.erg / u.s / u.cm**3
+    assert (bbs.value == np.full(3000,0)).all()
+
+    # Test a Sun-like star
+
+    t = 5900
+    lmaxf = wav[np.argmax(black_body_spectrum(wav, t))]
+    lmax = b_wien / (t * u.K) 
+    assert lmax.to("nm").value == pytest.approx(lmaxf.value, rel=1e-3)
 
 # ----------- TESTING calculate_angular_radius(Fth, a, qlum, R, lat, lon, i, phi=0) ------- Fth, a, qlum, R
 
@@ -167,7 +387,7 @@ def test_dot_ensemble_spherical():
     
     # Let the ensemble cover half a sphere
     p, t = dot_ensemble_spherical(0, 0, 90)
-    assert len(p) == 500001
+    assert len(p) == 4999
     assert len(p) == len(t)
     assert (p < np.pi / 2).all()
     assert (p > -np.pi / 2).all()
@@ -175,7 +395,7 @@ def test_dot_ensemble_spherical():
     assert (t > 0 ).all()
     
     # Look at tiny radii producing only one ...
-    p,t = dot_ensemble_spherical(0, 0, .1)
+    p,t = dot_ensemble_spherical(0, 0, 1)
     assert len(p) == 1
     
     # or no dots at all.
@@ -188,7 +408,7 @@ def test_dot_ensemble_spherical():
         
 ## ------------- TESTING  lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi=0)  -----------   
         
-def test_model():
+def test_lightcurve_model():
     
     # Set up a mock data set:
     phi = np.linspace(0,np.pi*2, 10)
