@@ -6,7 +6,8 @@ import numpy as np
 
 from .model import full_model, full_model_2flares, full_model_2flares2ars
 
-# I do not test the prior, log likelihood, or log probability functions. But the underlying ones.
+# I do not test the prior, log likelihood, or log probability functions. 
+# I do test the underlying functions like gaussian_prior etc.
 
 def logit(function):
     '''Make a probability distribution
@@ -63,7 +64,7 @@ def gaussian_prior(x, mu, sigma):
 
 
 def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
-    '''Do some checks to make sure MCMC will work. NOT TESTED.'''
+    '''Do some checks to make sure MCMC will work.'''
     if not np.isfinite(lp):
         return -np.inf
     if np.isnan(lp):
@@ -73,10 +74,10 @@ def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
 
 
 def log_prior(theta, i_mu=None, i_sigma=None, phi_a_min=0,
-              phi_a_max=1e9, theta_a_min=0,
+              phi_a_max=1e9, theta_a_min=-np.pi/2.,
               theta_a_max=np.pi/2, a_min=0, a_max=1e9,
-              fwhm_min=0, fwhm_max=1e9, phi0_min=0,
-              phi0_max=2*np.pi):
+              fwhm_min=0, fwhm_max=1e9, phi0_min=-np.pi,
+              phi0_max=np.pi):
     """Uniform prior for start time,
     amplitude, and duration.
 
@@ -143,68 +144,13 @@ def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
     
     return lp + ll
 
-#-------------------------------------------------------------------------------------
-# You can choose an uninformative prior if you don't know the inclination and still try
-# to fit the data.
-
-# def log_prior_no_incl(theta, i_mu=None, i_sigma=None, phi_a_min=0,
-#                       phi_a_max=1e9, theta_a_min=0,
-#                       theta_a_max=np.pi/2, a_min=0, a_max=1e9,
-#                       fwhm_min=0, fwhm_max=1e9, phi0_min=0,
-#                       phi0_max=2*np.pi):
-#     """Uniform prior for start time,
-#     amplitude, and duration.
-
-#     - no information on inclination
-#     - latitude between 0 and 90 deg
-#     - longitude always positive (can go multiple periods into light curve)
-#     - FWHM always positive.
-#     - Amplitude always positive.
-
-#     Parameters:
-#     ------------
-#     theta : tuple
-#         start time, duration, amplitude
-#     x : array
-#         time array to constrain start time
-#     """
-#     phi_a, theta_a, a, fwhm, i, phi0 =  theta
-
-#     prior = (uninformative_prior(i, 0, np.pi) +
-#              uninformative_prior(phi_a, phi_a_min, phi_a_max) +
-#              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
-#              uninformative_prior(a, a_min, a_max) +
-#              uninformative_prior(fwhm, fwhm_min, fwhm_max) +
-#              uninformative_prior(phi0, phi0_min, phi0_max))
-
-#     return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
-
-# def log_probability_no_incl(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
-#     """Posterior probability to pass to MCMC sampler.
-#     """
-#     lp = log_prior_no_incl(theta, **kwargs)
-
-#     if not np.isfinite(lp):
-#         return -np.inf
-   
-#     try:
-#         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
-    
-#     except:
-#         return -np.inf
-    
-#     if np.isnan(ll):
-#         return -np.inf
-    
-#     return lp + ll
-
 #------------------ TWO-FLARE MODEL ------------------------------------------------------------
 
 def log_prior_2flares(theta, i_mu=None, i_sigma=None, phi_a_min=(0,0),
-              phi_a_max=(1e9,1e9), theta_a_min=0,
-              theta_a_max=np.pi/2, a_min=(0,0), a_max=(1e9,1e9),
-              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=0,
-              phi0_max=2*np.pi):
+              phi_a_max=(1e9,1e9), theta_a_min=-np.pi/2.,
+              theta_a_max=np.pi/2., a_min=(0,0), a_max=(1e9,1e9),
+              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=-np.pi,
+              phi0_max=np.pi):
     """Uniform prior for start time,
     amplitude, and duration.
 
@@ -276,10 +222,10 @@ def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
 #------------------ TWO-FLARE TWO ACTIVE REGIONS MODEL ------------------------------------------------------------
 
 def log_prior_2flares2ars(theta, i_mu=None, i_sigma=None, phi_a_min=(0,0),
-              phi_a_max=(1e9,1e9), theta_a_min=0,
+              phi_a_max=(1e9,1e9), theta_a_min=-np.pi/2,
               theta_a_max=np.pi/2, a_min=(0,0), a_max=(1e9,1e9),
-              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=0,
-              phi0_max=2*np.pi):
+              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=-np.pi,
+              phi0_max=np.pi):
     """Uniform prior for start time,
     amplitude, and duration.
 
