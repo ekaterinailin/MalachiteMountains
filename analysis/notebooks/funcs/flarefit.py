@@ -55,10 +55,10 @@ def gaussian_prior(x, mu, sigma):
         latitude between -pi/2 and pi/2
     '''
     if (np.abs(x) > np.pi/2):
-        print("O")
+        #print("O")
         return 0
     else:
-        print(1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2)))
+       # print(1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2)))
 
         return  1 / (sigma * np.sqrt(2 * np.pi)) * np.exp( - (x - mu)**2 / (2 * sigma**2))
 
@@ -116,33 +116,69 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """
 
     phi_a, theta_a, a, fwhm, i, phi0 = theta
+
     model = full_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
                       phi=phi, num_pts=100, qlum=qlum,
                       Fth=Fth, R=R, median=median)
-
+  
     fr2 = flux_err**2
     val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
+ 
     return val
 
+import os
+import pandas as pd
+CWD = "/".join(os.getcwd().split("/")[:-2])
+lc = pd.read_csv(f"{CWD}/data/lcs/04_02_2020_12_01_100004076.csv")
 
-def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
+phi = lc.phi.values
+flux = lc.flux.values
+flux_err = lc.flux_err.values
+
+def log_probability(theta, qlum, Fth, R, median, kwargs):
     """Posterior probability to pass to MCMC sampler.
     """
     lp = log_prior(theta, **kwargs)
 
     if not np.isfinite(lp):
+        print("INF")
         return -np.inf
     
     try:
         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
         
     except:
+        print("FAIL")
         return -np.inf
     
     if np.isnan(ll):
+        print("NAN")
         return -np.inf
     
     return lp + ll
+
+
+# def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
+#     """Posterior probability to pass to MCMC sampler.
+#     """
+#     lp = log_prior(theta, **kwargs)
+
+#     if not np.isfinite(lp):
+#         print("INF")
+#         return -np.inf
+    
+#     try:
+#         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
+        
+#     except:
+#         print("FAIL")
+#         return -np.inf
+    
+#     if np.isnan(ll):
+#         print("NAN")
+#         return -np.inf
+    
+#     return lp + ll
 
 #------------------ TWO-FLARE MODEL ------------------------------------------------------------
 

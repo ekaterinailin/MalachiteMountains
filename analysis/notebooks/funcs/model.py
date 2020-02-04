@@ -69,8 +69,9 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     -------
     array of floats -  model light curve
     """
+    
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
-
+   
     flare = aflare(phi, phi_a, fwhm, a*median,)
 
     if radius<10: #deg
@@ -612,10 +613,11 @@ def calculate_angular_radius(Fth, a, qlum, R):
     -------
     float - radius of flaring area in deg
     """
-    
     sin = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
+   
     if sin > 1:
         raise ValueError("Flare area seems larger than stellar hemisphere.")
+    
     return np.arcsin(sin).to("deg").value
 
 
