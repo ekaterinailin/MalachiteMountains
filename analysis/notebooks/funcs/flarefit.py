@@ -126,16 +126,8 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
  
     return val
 
-import os
-import pandas as pd
-CWD = "/".join(os.getcwd().split("/")[:-2])
-lc = pd.read_csv(f"{CWD}/data/lcs/04_02_2020_12_01_100004076.csv")
 
-phi = lc.phi.values
-flux = lc.flux.values
-flux_err = lc.flux_err.values
-
-def log_probability(theta, qlum, Fth, R, median, kwargs):
+def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
     """Posterior probability to pass to MCMC sampler.
     """
     lp = log_prior(theta, **kwargs)
@@ -156,29 +148,6 @@ def log_probability(theta, qlum, Fth, R, median, kwargs):
         return -np.inf
     
     return lp + ll
-
-
-# def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
-#     """Posterior probability to pass to MCMC sampler.
-#     """
-#     lp = log_prior(theta, **kwargs)
-
-#     if not np.isfinite(lp):
-#         print("INF")
-#         return -np.inf
-    
-#     try:
-#         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
-        
-#     except:
-#         print("FAIL")
-#         return -np.inf
-    
-#     if np.isnan(ll):
-#         print("NAN")
-#         return -np.inf
-    
-#     return lp + ll
 
 #------------------ TWO-FLARE MODEL ------------------------------------------------------------
 

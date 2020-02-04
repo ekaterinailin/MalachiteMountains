@@ -23,11 +23,6 @@ CWD = "/".join(os.getcwd().split("/")[:-2])
 
 lcs = {"100004076":{"04_02_2020_12_01":pd.read_csv(f"{CWD}/data/lcs/04_02_2020_12_01_100004076.csv")}}
 
-lc = pd.read_csv(f"{CWD}/data/lcs/04_02_2020_12_01_100004076.csv")
-
-phi = lc.phi.values
-flux = lc.flux.values
-flux_err = lc.flux_err.values
 
 def run_mcmc(ID, tstamp, Nsteps=50000, wiggle=1e-3, nwalkers=32):
 
@@ -56,7 +51,7 @@ def run_mcmc(ID, tstamp, Nsteps=50000, wiggle=1e-3, nwalkers=32):
 
     with Pool(5) as pool:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probs[target.log_prob][1],
-                                    args=(qlum,#phi, flux, flux_err, 
+                                    args=(phi, flux, flux_err, qlum,
                                           Fth, (target.R_Rsun*R_sun).to("cm"), 
                                           target['median'],
                                           {"i_mu":target.i_mu,
@@ -84,5 +79,5 @@ if __name__ == "__main__":
 # Read ID from keyboard here
     ID = '100004076'#input("ID? ")
     tstamp = '04_02_2020_12_01'#input("tstamp? ")
-    Nsteps = 30#input("Number of steps? ")
+    Nsteps = 10#input("Number of steps? ")
     run_mcmc(ID, tstamp, Nsteps=int(Nsteps))
