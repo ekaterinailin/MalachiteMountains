@@ -47,7 +47,8 @@ def show_flare(target, save=False):
         plt.savefig(f"{CWD}/analysis/plots/{target.ID}_{target.QCS:02d}_lightcurve.png",dpi=300)
 
 
-def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
+def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
+               custom=True, flc=None):
     """Find dominant periodic modulation using
     Lomb-Scargle periodogram.
 
@@ -63,15 +64,22 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
         If True, will plot the periodogram
     save : bool
         If True, will save periodogram plot to file.
-
+    custom : True
+        use custom extracted LCs
+    flc : FlareLightCurve
+        if custom is False, use this LC
+        
     Return:
     -------
     period, frequency : astropy Quantities
         dominant modulation period in hours,
         and frequency in 1/day, respectively.
     """
-    # Fetch light curve
-    flc = fetch_lightcurve(target)
+        # Fetch light curve
+    if custom==True:
+        flck = fetch_lightcurve(target)
+    else: 
+        flck = flc
 
     # Use Lomb-Scargle periodogram implemented in lightkurve
     pg = flc.remove_nans().to_periodogram(freq_unit=1/u.d,
@@ -98,7 +106,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True):
 
 
 def remove_sinusoidal(target, plot=True, save=False,
-                      period=None, mfp=None):
+                      period=None, mfp=None, custom=True, flc=None):
 
     """Fit a sinusoidal modulation and
     subtract it from the flux.
@@ -115,6 +123,10 @@ def remove_sinusoidal(target, plot=True, save=False,
         rotation period, passed manually, default None
     mfp : Astropy Quantity in 1/d
         frequency at max. power, passed manually, default None
+    custom : True
+        use custom extracted LCs
+    flc : FlareLightCurve
+        if custom is False, use this LC
         
     Return:
     -------
@@ -126,11 +138,14 @@ def remove_sinusoidal(target, plot=True, save=False,
         return a * np.cos(b * x + c) + d * x + e
 
     # Fetch light curve
-    flck = fetch_lightcurve(target)
+    if custom==True:
+        flck = fetch_lightcurve(target)
+    else: 
+        flck = flc
 
     # Get the dominant modulation period
     if ((period is None) | (mfp is None)):
-        period, mfp = find_period(target, save=False, plot=False)
+        period, mfp = find_period(target, save=False, plot=False, custom=custom, flc=flc)
 
     # Optimize for the model parameters using
     # non-linear least-squares (Levenberg-Marquardt):
