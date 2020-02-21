@@ -101,7 +101,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
                 target['median'], {"i_mu":target.i_mu, "i_sigma":target.i_sigma})
     
 
-    with Pool(3) as pool:
+    with Pool(7) as pool:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probs[target.log_prob][1],
                                         args=args,backend=backend,pool=pool)
         start = time.time()
@@ -118,7 +118,7 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
     
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}{suffix}_MCMC.h5"
     new_backend = emcee.backends.HDFBackend(filename)
-    print(f"Initial size: {new_backend.iteration}")
+    print(f"Initial size: {filename} {new_backend.iteration}")
     print(f"Dimensions: {ndim}")
           
     YN = input("Continue? (1/0)")
@@ -126,7 +126,7 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
         print("Do not continue.")
         return
     elif YN == "1":
-        with Pool(3) as pool:
+        with Pool(7) as pool:
             new_sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probs[target.log_prob][1],
                                         args=(phi, flux, flux_err, qlum,
                                               Fth, (target.R_Rsun*R_sun).to("cm"), 
@@ -145,12 +145,12 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = '237880881'#input("ID? ")
-    tstamp = '11_02_2020_10_07'#input("tstamp? ")
+    ID = '100004076'#input("ID? ")
+    tstamp = '20_02_2020_12_04'#input("tstamp? ")
     Nsteps = 100000#input("Number of steps? ")
-    nflares = 2
-    nars = 2
-    filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}b_MCMC.h5"
+    nflares = 1
+    nars = 1
+    filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 
     if os.path.isfile(filename):
         print ("File exist")
