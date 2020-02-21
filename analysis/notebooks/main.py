@@ -147,7 +147,7 @@ if __name__ == "__main__":
     
     ID = '100004076'#input("ID? ")
     tstamp = '20_02_2020_12_04'#input("tstamp? ")
-    Nsteps = 100000#input("Number of steps? ")
+    Nsteps = 500000#input("Number of steps? ")
     nflares = 1
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
