@@ -82,7 +82,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
         flck = flc
 
     # Use Lomb-Scargle periodogram implemented in lightkurve
-    pg = flc.remove_nans().to_periodogram(freq_unit=1/u.d,
+    pg = flck.remove_nans().to_periodogram(freq_unit=1/u.d,
                                               maximum_frequency=maxfreq,
                                               minimum_frequency=minfreq)
 
