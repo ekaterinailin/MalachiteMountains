@@ -52,7 +52,7 @@ def fetch_lightcurve(target):
             f"{target.mission}_{target.typ}_{target.origin}.fits")
 
     flc = read_custom_aperture_lc(path, mission=target.h_mission,
-                                  mode="LC", typ=target.typ,
+                                  mode="LC", typ=target.origin,
                                   TIC=target.ID, sector=target.QCS)
     return flc
 
@@ -191,6 +191,7 @@ def calculate_inclination(s):
     eR, eP, evsini = s.rad_err * R_sun, 0 * u.d, s.e_vsini_kms * u.km / u.s
 
     sini = vsini * P / 2 / np.pi / R
+    print(f"sin(i)={sini.decompose()}")
     incl = np.arcsin(sini)
 
     _a = vsini / 2 / np.pi / R
