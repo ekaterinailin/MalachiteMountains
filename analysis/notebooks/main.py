@@ -145,12 +145,12 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = '100004076'#input("ID? ")
-    tstamp = '20_02_2020_12_04'#input("tstamp? ")
-    Nsteps = 500000#input("Number of steps? ")
-    nflares = 1
+    ID = '237880881'#input("ID? ")
+    tstamp = '11_02_2020_10_07'#input("tstamp? ")
+    Nsteps = 1000000#input("Number of steps? ")
+    nflares = 2
     nars = 1
-    filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
+    filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}b_MCMC.h5"
 
     if os.path.isfile(filename):
         print ("File exist")
