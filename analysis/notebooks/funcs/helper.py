@@ -170,39 +170,3 @@ def create_spherical_grid(num_pts):
     return phi, theta
 
 
-def calculate_inclination(s):
-    """Determine the inclination
-    vsini, stellar radius, and rotation
-    period.
-    
-    Parameters:
-    -----------
-    s : pandas Series
-        contains "rad", "rad_err", "Prot_d",
-        "vsini_kms", and "e_vsini_kms". No uncertainties
-        on "P".
-    
-    Return:
-    -------
-    inclination, uncertainty on inclination - 
-        astropy Quantities
-    """
-    R, P, vsini = s.rad * R_sun, s.Prot_d * u.d, s.vsini_kms * u.km / u.s
-    eR, eP, evsini = s.rad_err * R_sun, 0 * u.d, s.e_vsini_kms * u.km / u.s
-
-    sini = vsini * P / 2 / np.pi / R
-    print(f"sin(i)={sini.decompose()}")
-    incl = np.arcsin(sini)
-
-    _a = vsini / 2 / np.pi / R
-    sigP_squared = (_a / np.sqrt(1 - (_a * P)**2))**2 * eP**2
-
-    _b = P / 2 / np.pi / R
-    sigvsini_squared = (_b / np.sqrt(1 - (_b * vsini)**2))**2 * evsini**2
-
-    _c = vsini * P / 2 / np.pi
-    sigR_squared = ( - _c / R**2 / np.sqrt(1 - (_c / R)**2))**2 * eR**2 
-
-    eincl = np.sqrt(sigP_squared + sigR_squared + sigvsini_squared).decompose()*u.rad
-
-    return incl.to("deg"), eincl.to("deg")
