@@ -696,4 +696,25 @@ def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
 
 
 
-
+def calculate_ED(t, t0, dur, ampl):
+    """Calculate equiavlent duration
+    of model flare.
+    
+    Parameters:
+    -----------
+    t : numpy.array
+        observation times in days
+    t0 : float
+        flare peak time
+    dur : float
+        flare FWHM
+    ampl : float
+        relative flare amplitude
+        
+    Return:
+    --------
+    ED in seconds - float
+    """
+    if no_nan_inf([t0, dur, ampl]) == False:
+        raise ValueError("flaret is NaN or Inf.")
+    return np.sum(np.diff(t) * aflare(t, t0, dur, ampl)[:-1]) * 60.0 * 60.0 * 24.0

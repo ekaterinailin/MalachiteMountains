@@ -17,7 +17,8 @@ from ..model import (aflare,
                      lightcurve_model,
                      full_model,
                      full_model_2flares,
-                     full_model_2flares2ars,)
+                     full_model_2flares2ars,
+                     calculate_ED)
 
 # ---------------------- TESTING full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
 #                                           phi=None, num_pts=100, qlum=None,
@@ -427,3 +428,34 @@ def test_lightcurve_model():
     assert (lamb[0]==pytest.approx(0.)) # dot on top
     assert (lamb[1] * onoff[1] >= 0.).all()
     assert np.max(m)==m[-1]
+
+    
+def test_calculate_ED():
+    # unit testing
+    #--------------
+    
+    # Throw error with bad values
+    with pytest.raises(ValueError):
+        calculate_ED(t, np.nan, 1, 0)
+    with pytest.raises(ValueError):
+        calculate_ED(t, 2, np.nan, 0)
+    with pytest.raises(ValueError):
+        calculate_ED(t, 2, 5, np.nan)
+
+    # Return NaN if any time values are not properly defined
+    t[4:12]= np.nan
+    assert np.isnan(calculate_ED(t, 2, 5, 1))
+    
+    # integration testing
+    #---------------------
+    
+    t = np.linspace(1,11,200)
+    
+    # 0 duration
+    assert calculate_ED(t, 2, 0, 1) == 0.
+    
+    # 0 amplitude
+    assert calculate_ED(t, 2, 1, 0) == 0.
+    
+    #triangle approximation
+    assert calculate_ED(t, 1, 1, .1) < .1 * 60.0 * 60.0 * 24.0 
