@@ -548,7 +548,7 @@ def black_body_spectrum(wav, t):
     t = t * u.K # set unit to Kelvin
 
     return (( (2 * np.pi * h * c**2) / (wav**5) / (np.exp( (h * c) / (wav * k_B * t) ) - 1))
-            .to("erg/s/cm**3")) #simplify the units
+            .to("erg*s**(-1)*cm**(-3)")) #simplify the units
 
 
 def calculate_specific_flare_flux(mission, flaret=1e4):
@@ -590,7 +590,7 @@ def calculate_specific_flare_flux(mission, flaret=1e4):
 
     # Integrating the flux of the thermal
     # spectrum times the response curve over wavelength:
-    return np.trapz(thermf * rres, x=w).to("erg/cm**2/s")
+    return np.trapz(thermf * rres, x=w).to("erg*cm**(-2)*s**(-1)")
 
 
 
