@@ -26,7 +26,7 @@ for key, val in response_curve.items():
     
 #----------------------------------------------------------------------
 
-# Create a spherical grid only one for the entire analysis ------------
+# Create a spherical grid only once for the entire analysis ------------
 
 PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
 

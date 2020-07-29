@@ -9,7 +9,7 @@ from astropy.io import fits
 
 from ..multiperiod import find_period, remove_sinusoidal
 
-CWD = "/".join(os.getcwd().split("/")[:-2])
+CWD = os.getcwd()
 
 def test_find_period():
     
@@ -25,7 +25,7 @@ def test_find_period():
         c4 = fits.Column(name='QUALITY', array= np.full(N,0), format='K')
         c5 = fits.Column(name='CADENCENO', array= np.arange(100,N+100), format='K')
         hdu = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5], header=hdr)
-        PATH = f"{CWD}/data/lcs/1000_10_tess_custom_flc.fits"
+        PATH = f"{CWD}/1000_10_tess_custom_flc.fits"
         hdu.writeto(PATH,overwrite=True)
 
     # Create a target description
@@ -42,8 +42,6 @@ def test_find_period():
     hours = 6
     flc = create_lc(hours)
     period, mfp = find_period(target, minfreq=.1, maxfreq=40, plot=False, save=False)
-  # period, mfp = find_period(target, minfreq=.1, maxfreq=40, plot=True, save=False)
-  # period, mfp = find_period(target, minfreq=.1, maxfreq=40, plot=True, save=True)
 
     # Do some checks
     assert period.value == pytest.approx(hours)
@@ -62,12 +60,14 @@ def test_remove_sinusoidal():
         t = np.linspace(start, stop, N)
         np.random.seed(4)
         c1 = fits.Column(name='TIME', array=t, format='F10.4')
-        c2 = fits.Column(name='FLUX', array=np.random.rand(N)*40 + 400 + 25*np.sin(t * np.pi * 48 / hours), format='F10.4')
+        c2 = fits.Column(name='FLUX', 
+                         array=np.random.rand(N)*40 + 400 + 25 * np.sin(t * np.pi * 48 / hours),
+                         format='F10.4')
         c3 = fits.Column(name='FLUX_ERR', array= 20*np.random.rand(N), format='F10.4')
         c4 = fits.Column(name='QUALITY', array= np.full(N,0), format='K')
         c5 = fits.Column(name='CADENCENO', array= np.arange(100,N+100), format='K')
         hdu = fits.BinTableHDU.from_columns([c1,c2,c3,c4,c5], header=hdr)
-        PATH = f"{CWD}/data/lcs/1000_10_tess_custom_flc.fits"
+        PATH = f"{CWD}/1000_10_tess_custom_flc.fits"
         hdu.writeto(PATH,overwrite=True)
 
     # Create a target description
@@ -93,7 +93,7 @@ def test_remove_sinusoidal():
     start, stop, N = 1000, 1020, 10000
     t = np.linspace(start, stop, N)
     time, sflux, model, period = remove_sinusoidal(target, plot=True, save=False,
-                                                      period=None, mfp=None)
+                                                      period=None, mfp=None, flux_type="FLUX")
 
     # Do some checks
 

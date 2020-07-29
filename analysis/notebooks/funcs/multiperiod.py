@@ -13,7 +13,7 @@ import astropy.units as u
 
 from scipy import optimize
 
-CWD = "/".join(os.getcwd().split("/")[:-2])
+CWD = os.getcwd()
 
 import warnings
 warnings.simplefilter("ignore")
@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 # We do not test show_flare
 
-def show_flare(target, save=False):
+def show_flare(target, save=False, path=CWD):
     """Get light curve and plot it."""
 
     # Fetch light curve
@@ -31,7 +31,8 @@ def show_flare(target, save=False):
     plt.figure(figsize=(15,6))
 
     # Plot the light curve
-    plt.plot(flc.time, flc.flux, c="grey",label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V")
+    plt.plot(flc.time, flc.flux, c="grey",
+             label=f"{target.prefix} {target.ID}, S{target.QCS}, {target.SpT}V")
 
     # Fix plot limits
     plt.xlim(target.view_start,target.view_stop)
@@ -44,11 +45,12 @@ def show_flare(target, save=False):
 
     # Saving optional
     if save==True:
-        plt.savefig(f"{CWD}/analysis/plots/{target.ID}_{target.QCS:02d}_lightcurve.png",dpi=300)
+        plt.savefig(f"{path}/{target.ID}_{target.QCS:02d}_lightcurve.png",dpi=300)
 
 
-def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
-               custom=True, flc=None):
+def find_period(target, minfreq=2, maxfreq=10, plot=True, 
+                save=True, path=CWD,
+                custom=True, flc=None):
     """Find dominant periodic modulation using
     Lomb-Scargle periodogram.
 
@@ -64,6 +66,8 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
         If True, will plot the periodogram
     save : bool
         If True, will save periodogram plot to file.
+    path : str
+        Path to file
     custom : True
         use custom extracted LCs
     flc : FlareLightCurve
@@ -97,7 +101,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
 
         # Optionally save to file
         if save==True:
-            plt.savefig(f"{CWD}/analysis/plots/{target.ID}_{target.QCS}_periodogram.png",dpi=300)
+            plt.savefig(f"{path}/{target.ID}_{target.QCS}_periodogram.png",dpi=300)
 
     # Stdout
     print(f"{target.prefix} {target.ID} modulation period: ", period)
@@ -105,8 +109,9 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True, save=True,
     return period, pg.frequency_at_max_power
 
 
-def remove_sinusoidal(target, plot=True, save=False,
-                      period=None, mfp=None, custom=True, flc=None):
+def remove_sinusoidal(target, plot=True, save=False, path=CWD,
+                      period=None, mfp=None, custom=True, flc=None,
+                      flux_type="FLUX"):
 
     """Fit a sinusoidal modulation and
     subtract it from the flux.
@@ -119,6 +124,8 @@ def remove_sinusoidal(target, plot=True, save=False,
         If True, will plot the periodogram
     save : bool
         If True, will save periodogram plot to file.
+    path : str
+        Path to file
     period : Astropy Quantity in hours
         rotation period, passed manually, default None
     mfp : Astropy Quantity in 1/d
@@ -127,6 +134,8 @@ def remove_sinusoidal(target, plot=True, save=False,
         use custom extracted LCs
     flc : FlareLightCurve
         if custom is False, use this LC
+    flux_type : str
+        "PDCSAP_FLUX", "SAP_FLUX", "FLUX" or other
         
     Return:
     -------
@@ -139,7 +148,7 @@ def remove_sinusoidal(target, plot=True, save=False,
 
     # Fetch light curve
     if custom==True:
-        flck = fetch_lightcurve(target)
+        flck = fetch_lightcurve(target, flux_type=flux_type)
     else: 
         flck = flc
 
@@ -196,6 +205,6 @@ def remove_sinusoidal(target, plot=True, save=False,
 
         # Save optionally
         if save==True:
-            plt.savefig(f"{CWD}/analysis/plots/{target.ID}_s{target.QCS}_sinusoidal.png",dpi=300)
+            plt.savefig(f"{path}/{target.ID}_s{target.QCS}_sinusoidal.png",dpi=300)
 
     return flck.time, subtracted_flux, model, period

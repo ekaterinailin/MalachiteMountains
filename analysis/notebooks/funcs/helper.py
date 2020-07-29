@@ -12,7 +12,7 @@ from altaipony.lcio import from_path
 
 import sys, os
 
-CWD = "/".join(os.getcwd().split("/")[:-2])
+CWD = os.getcwd()
 
 
 # We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
@@ -40,25 +40,28 @@ def no_nan_inf(l):
     return True
 
 
-def fetch_lightcurve(target):
+def fetch_lightcurve(target, flux_type="FLUX", path=CWD):
     """Read in light curve from file.
 
     Parameters:
     -----------
     target: Series
         Description of the target.
+    flux_type : str
+        "PDCSAP_FLUX", "SAP_FLUX", "FLUX" or other
     """
-    path = (f"{CWD}/data/lcs/{target.ID}_{target.QCS:02d}_" \
+    path = (f"{path}/{target.ID}_{target.QCS:02d}_" \
             f"{target.mission}_{target.typ}_{target.origin}.fits")
 
     flc = read_custom_aperture_lc(path, mission=target.h_mission,
                                   mode="LC", typ=target.origin,
-                                  TIC=target.ID, sector=target.QCS)
+                                  TIC=target.ID, sector=target.QCS,
+                                  flux_type=flux_type)
     return flc
 
 
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
-                            sector=None, TIC=None):
+                            sector=None, TIC=None, flux_type="PDCSAP_FLUX"):
     '''Read in custom aperture light curve
     from TESS or uses AltaiPony's from path for standard 
     light curves. Needs specific naming convention.
@@ -68,6 +71,8 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     -----------
     path : str
         path to file
+    flux_type : str
+        "PDCSAP_FLUX", "SAP_FLUX", "FLUX" or other
 
     Returns:
     --------
@@ -90,7 +95,8 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
                             campaign=sector)
         flc = fix_mask(flc)
     else:
-        flc = from_path(path, mission=mission, mode=mode)
+        flc = from_path(path, mission=mission, 
+                        mode=mode, flux_type=flux_type)
         
     return flc
 
@@ -170,3 +176,61 @@ def create_spherical_grid(num_pts):
     return phi, theta
 
 
+
+def calculate_inclination(s, eP=1./24/30):
+    """Determine the inclination
+    vsini, stellar radius, and rotation
+    period.
+    
+    Parameters:
+    -----------
+    s : pandas Series
+        contains "rad", "rad_err", "Prot_d",
+        "vsini_kms", and "e_vsini_kms". No uncertainties
+        on "P". Instead, time resolution of light curve
+        is used as uncertainty.
+    eP : float
+        Set uncertainty to 2min for TESS light curves
+        automatically. Values is measured in days.
+    Return:
+    -------
+    inclination, uncertainty on inclination - 
+        astropy Quantities
+    """
+    # Get radius und and period, plus their uncerainties
+    R, P = s.rad * R_sun, s.Prot_d * u.d
+    eR, eP = s.rad_err * R_sun, eP * u.d
+    
+    # Get vsini and its uncertainty
+    vsini = s.vsini_kms * u.km / u.s
+    evsini = s.e_vsini_kms * u.km / u.s
+    
+    # Caclulate sini
+    sini = vsini * P / 2. / np.pi / R
+    
+    # Calculate rotation velocity
+    v = vsini / sini
+    
+    # Calculate inclination
+    incl = np.arcsin(sini)
+    
+    # Calculate uncertainty on sini
+    # Propagate uncertainties on R, vsini, and Prot
+    t1 = vsini * P / (2. * np.pi * R**2) * eR
+    t2 = P / (2. * np.pi * R) * evsini
+    t3 = vsini / (2. * np.pi * R) * eP
+    esini = np.sqrt(t1**2 + t2**2 + t3**2) *u.rad
+    
+    # If inclincation is close to 90 degree
+    # Use taylor expansion of d/dx(arcsin(x)) 
+    # around x=1
+    # to get uncertainty on inclination from sini
+    if incl - np.pi / 2 * u.rad < 1e-3 * u.rad:
+        eincl = 1 / np.sqrt(2) / np.sqrt(1 + sini) * esini
+    # At inclinations lower than that calculate the
+    # derivative directly
+    else:
+        eincl = 1 / np.sqrt(1- sini**2) * esini
+
+    return (incl.to("deg"), eincl.to("deg"), 
+            sini.decompose().value, esini.decompose().value)

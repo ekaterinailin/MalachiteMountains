@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 
+import copy
+
 import astropy.units as u
 from astropy.constants import  R_sun, b_wien
 
@@ -419,7 +421,9 @@ def test_lightcurve_model():
     inclination = np.pi/2
     
     # Calculate the model
-    lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, inclination,)
+    lamb, onoff, m = lightcurve_model(phi, latitudes, 
+                                      longitudes,
+                                      flare, inclination,)
     
     # Do some checks
     assert m[0] == 0
@@ -429,8 +433,12 @@ def test_lightcurve_model():
     assert (lamb[1] * onoff[1] >= 0.).all()
     assert np.max(m)==m[-1]
 
+# ------------- TESTING  calculate_ED(t, t0, dur, ampl )  -------------------------------      
     
 def test_calculate_ED():
+    # Define time array
+    t = np.linspace(1,11,200)
+    
     # unit testing
     #--------------
     
@@ -441,15 +449,14 @@ def test_calculate_ED():
         calculate_ED(t, 2, np.nan, 0)
     with pytest.raises(ValueError):
         calculate_ED(t, 2, 5, np.nan)
-
+    
     # Return NaN if any time values are not properly defined
-    t[4:12]= np.nan
-    assert np.isnan(calculate_ED(t, 2, 5, 1))
+    t2 = copy.copy(t)
+    t2[4:12]= np.nan
+    assert np.isnan(calculate_ED(t2, 2, 5, 1))
     
     # integration testing
     #---------------------
-    
-    t = np.linspace(1,11,200)
     
     # 0 duration
     assert calculate_ED(t, 2, 0, 1) == 0.

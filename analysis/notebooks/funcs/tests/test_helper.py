@@ -30,11 +30,11 @@ def test_calculate_inclination():
                    "vsini_kms":[15, 15, 45, 15],
                    "e_vsini_kms":[2, 2, 2, 0],
                     "i":[36.3680921216061, np.nan,np.nan,36.3680921216061],
-                   "ei":[6.008265950596777,np.nan,np.nan,0.]})
+                   "ei":[2.7137065322409555,np.nan,np.nan,0.13218263173757777]})
     
     # run on all rows
     for i, s in df.iterrows():
-        i, ei = calculate_inclination(s)
+        i, ei, sini, esini = calculate_inclination(s)
         if np.isnan(i):
             assert np.isnan(s.i)
             assert np.isnan(s.ei)
@@ -122,6 +122,8 @@ def test_read_custom_aperture_lc():
     assert flc.campaign == 10
     assert flc.targetid == 1000
 
+# -------------------------------- TESTING no_nan_inf() ----------------------------
+    
 cases = [((0, 0, np.nan), False),
          ((0, 0, 0), True), 
          ((0, 3, 0, np.linspace(0, 1, 10 )), True),
