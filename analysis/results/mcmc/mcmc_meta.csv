@@ -4,3 +4,9 @@ date,ID,burnin,steps,walkers,nparam,ndim
 11_02_2020_10_07,237880881,34903,1576002,32,9,9
 date,ID,burnin,steps,walkers,nparam,ndim, thin
 11_02_2020_10_07,237880881,34903,1576002,32,9,9,163
+date,ID,burnin,steps,walkers,nparam,ndim
+24_07_2020_11_48,44984200,4000,637440,6,6,6
+date,ID,burnin,steps,walkers,ndim
+24_07_2020_11_48,44984200,206,744032,6,6
+date,ID,burnin,steps,walkers,ndim
+02_08_2020_17_24,100004076,100,1600,6,6

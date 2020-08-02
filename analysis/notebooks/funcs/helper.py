@@ -12,7 +12,7 @@ from altaipony.lcio import from_path
 
 import sys, os
 
-CWD = os.getcwd()
+CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
 
 
 # We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
@@ -96,7 +96,7 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
         flc = fix_mask(flc)
     else:
         flc = from_path(path, mission=mission, 
-                        mode=mode, flux_type=flux_type)
+                        mode=mode, )#flux_type=flux_type)
         
     return flc
 

@@ -230,6 +230,11 @@ def lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     assert l == len(longitudes)
     assert len(phi) == len(flare)
     # -----------------------------------------------
+    
+    # Mould phi0 into -pi:pi range
+
+    phi0 = phi0 % (2*np.pi)
+ 
 
     # Get daylengths for all grid points
     # and calculate day/night switches:

@@ -68,10 +68,10 @@ def write_mcmc_output(resultframe, tstamp, ID, suffix, CWD):
 
         pd.DataFrame(series).T.to_csv(f, index=False)
 
-def write_meta_mcmc(CWD, tstamp, ID, burnin, steps, walkers, nparam, ndim):
+def write_meta_mcmc(CWD, tstamp, ID, burnin, steps, walkers, ndim):
     with open(f"{CWD}/analysis/results/mcmc/mcmc_meta.csv","a") as f:
-        out = f"{tstamp},{ID},{burnin},{steps},{walkers},{nparam},{ndim}"
-        firstout = f"date,ID,burnin,steps,walkers,nparam,ndim"
+        out = f"{tstamp},{ID},{burnin},{steps},{walkers},{ndim}"
+        firstout = f"date,ID,burnin,steps,walkers,ndim"
         out += "\n"
         firstout += "\n"
         f.write(firstout)

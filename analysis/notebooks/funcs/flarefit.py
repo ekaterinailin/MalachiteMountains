@@ -44,6 +44,8 @@ def uninformative_prior(rate, minrate, maxrate):
         return 0
 
 
+    
+
 @logit
 def gaussian_prior(x, mu, sigma):
     '''Evaluate a normalized Gaussian function
@@ -76,8 +78,8 @@ def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
 def log_prior(theta, i_mu=None, i_sigma=None, phi_a_min=0,
               phi_a_max=1e9, theta_a_min=-np.pi/2.,
               theta_a_max=np.pi/2, a_min=0, a_max=1e9,
-              fwhm_min=0, fwhm_max=1e9, phi0_min=-np.pi,
-              phi0_max=np.pi):
+              fwhm_min=0, fwhm_max=1e9, phi0_min=-2*np.pi,
+              phi0_max=2.*np.pi):
     """Uniform prior for start time,
     amplitude, and duration.
 

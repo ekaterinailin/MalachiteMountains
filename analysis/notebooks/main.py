@@ -146,7 +146,7 @@ if __name__ == "__main__":
 # Read ID from keyboard here
     
     ID = '44984200'#input("ID? ")
-    tstamp = '24_07_2020_11_48'#input("tstamp? ")
+    tstamp = '02_08_2020_17_44'#input("tstamp? ")
     Nsteps = 1000000#input("Number of steps? ")
     nflares = 1
     nars = 1
