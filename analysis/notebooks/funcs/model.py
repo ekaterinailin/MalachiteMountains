@@ -39,7 +39,7 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
 
     Parameters:
     ------------
-    phi_a : float (0,2pi)
+    phi_a : float (0,2pi) + N*2pi
         longitude of the flare peak in rad
     theta_a : float (0, pi/2)
         latitude of the flaring region in rad
@@ -512,12 +512,14 @@ def daylength(l, i, P=1.):
         elif ((l > np.pi/2).any() | (l < -np.pi/2).any()):
             raise ValueError("Latitude must be in [-pi/2,pi/2]")
 
-        res = formula(l,i)
-      #  res[l>=i] = P
+        res = np.full_like(l, np.nan)
+        # polar night
         res[np.abs(l) >=i] = 0
+        # polar day
         res[l>=i] = P
+        # rest
+        res[np.isnan(res)] = formula(l[np.isnan(res)], i)
 
-     #   print(res*P)
         return res * P
 
     elif ((isinstance(l, float)) | (isinstance(l, int))):
