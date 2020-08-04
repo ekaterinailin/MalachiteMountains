@@ -71,7 +71,7 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     """
     
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
-   
+
     flare = aflare(phi, phi_a, fwhm, a*median,)
 
     if radius<10: #deg
