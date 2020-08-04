@@ -23,31 +23,35 @@ def custom_detrend(flc):
     return f
 
 def sample_flare_recovery(target, sec, mission, iterations=10):
-    flc = from_mast(f"{target.prefix} {target.ID}", cadence="short", c=sec, mission=mission)
-    
-    f = custom_detrend(flc)
+    flcs = from_mast(f"{target.prefix} {target.ID}", cadence="short", c=sec, mission=mission)
+    flcs = list(flcs)
+    for i, flc in enumerate(flcs):
+        f = custom_detrend(flc)
 
-    flares = f.find_flares().flares
-    flares["ID"] = target.ID
-    flares["sector"] = sec
-    df = df.append(flares)
-    
-    # Inj/Rec
-    df["dur"] = df.tstop - df.tstart
-    flc, fake_flc = flc.sample_flare_recovery(inject_before_detrending=True, mode="custom",
-                                              iterations=iterations, fakefreq=1e-3, 
-                                              ampl=[df.ampl_rec.min()/2, df.ampl_rec.max()*1.5],
-                                              dur=[df.dur.min()/6., df.dur.max()/4.], 
-                                              func=custom_detrend)
-    with open(f"{CWD}/analysis/results/flarefind/{target.ID}_s{sec}_fake_flares.csv", "a") as F:
-        flc.fake_flares.to_csv(F, index=False)
+        flares = f.find_flares().flares
+        flares["ID"] = target.ID
+        flares["sector"] = sec
+        df = flares
+
+        # Inj/Rec
+        df["dur"] = df.tstop - df.tstart
+        flc, fake_flc = flc.sample_flare_recovery(inject_before_detrending=True, mode="custom",
+                                                  iterations=iterations, fakefreq=1e-3, 
+                                                  ampl=[df.ampl_rec.min()/2, df.ampl_rec.max()*1.5],
+                                                  dur=[df.dur.min()/6., df.dur.max()/4.], 
+                                                  func=custom_detrend)
         
-    print("Before loading extra events: New events: ", flc.fake_flares.shape[0])
-    
-    flc.load_injrec_data(f"{CWD}/analysis/results/flarefind/{target.ID}_s{sec}_fake_flares.csv")
-    flc.fake_flares = flc.fake_flares.drop_duplicates(keep=False).astype(float)
-    
-    print("After loading extra events: Total events: ", flc.fake_flares.shape[0])
+        outpath = f"{CWD}/analysis/results/flarefind/{target.ID}_s{sec}_{i}_fake_flares.csv"
+        
+        with open(outpath, "a") as F:
+            flc.fake_flares.to_csv(F, index=False)
+
+        print("Before loading extra events: New events: ", flc.fake_flares.shape[0])
+
+        flc.load_injrec_data(outpath)
+        flc.fake_flares = flc.fake_flares.drop_duplicates(keep=False).astype(float)
+
+        print("After loading extra events: Total events: ", flc.fake_flares.shape[0])
 
 
 if __name__ == "__main__":
@@ -58,6 +62,7 @@ if __name__ == "__main__":
                100004076:[[14],"Kepler"],}
     lcs = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")
     
+
     for l, target in lcs.iterrows():
         secs, mission = sector[target.ID]
         for sec in secs:
