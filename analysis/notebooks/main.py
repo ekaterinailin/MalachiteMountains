@@ -146,9 +146,9 @@ if __name__ == "__main__":
 # Read ID from keyboard here
     
     ID = '44984200'#input("ID? ")
-    tstamp = '02_08_2020_17_44'#input("tstamp? ")
+    tstamp = '04_08_2020_13_40'#input("tstamp? ")
     Nsteps = 1000000#input("Number of steps? ")
-    nflares = 1
+    nflares = 2
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 

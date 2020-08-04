@@ -48,7 +48,7 @@ def show_flare(target, save=False, path=CWD):
         plt.savefig(f"{path}/{target.ID}_{target.QCS:02d}_lightcurve.png",dpi=300)
 
 
-def find_period(target, minfreq=2, maxfreq=10, plot=True, 
+def find_period(target, minfreq=1, maxfreq=15, plot=True, 
                 save=True, path=CWD,
                 custom=True, flc=None):
     """Find dominant periodic modulation using
@@ -84,7 +84,7 @@ def find_period(target, minfreq=2, maxfreq=10, plot=True,
         flck = fetch_lightcurve(target)
     else: 
         flck = flc
-
+   
     # Use Lomb-Scargle periodogram implemented in lightkurve
     pg = flck.remove_nans().to_periodogram(freq_unit=1/u.d,
                                               maximum_frequency=maxfreq,

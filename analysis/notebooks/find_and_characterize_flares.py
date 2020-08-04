@@ -1,3 +1,23 @@
+"""
+UTF-8, Python 3
+
+------------------
+MalachiteMountains
+------------------
+
+Ekaterina Ilin, 2020, MIT License
+
+
+This script fetches all light curves of
+the targets that showed multiperiod flares,
+detrends them, and performs the injection and
+recovery of synthetic flares.
+
+The resulting table of injected (and recovered)
+flares is saved to file for further analysis, and
+flare characterization in particular.
+
+"""
 import os
 import copy
 
@@ -24,8 +44,11 @@ def custom_detrend(flc):
 
 def sample_flare_recovery(target, sec, mission, iterations=10):
     flcs = from_mast(f"{target.prefix} {target.ID}", cadence="short", c=sec, mission=mission)
-    flcs = list(flcs)
+    if mission != "Kepler":
+        flcs = [flcs]
+ 
     for i, flc in enumerate(flcs):
+
         f = custom_detrend(flc)
 
         flares = f.find_flares().flares
@@ -43,8 +66,13 @@ def sample_flare_recovery(target, sec, mission, iterations=10):
         
         outpath = f"{CWD}/analysis/results/flarefind/{target.ID}_s{sec}_{i}_fake_flares.csv"
         
+        if os.path.exists(outpath):
+            header=False
+        else:
+            header=True
+            
         with open(outpath, "a") as F:
-            flc.fake_flares.to_csv(F, index=False)
+            flc.fake_flares.to_csv(F, index=False, header=header)
 
         print("Before loading extra events: New events: ", flc.fake_flares.shape[0])
 
@@ -63,8 +91,9 @@ if __name__ == "__main__":
     lcs = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")
     
 
-    for l, target in lcs.iterrows():
-        secs, mission = sector[target.ID]
+    for l, target in lcs.iloc[0:-1].iterrows():
+        print(f"Running {target.ID}")
+        secs, mission = sectors[target.ID]
         for sec in secs:
-            sample_flare_recovery(target, sec, mission, iterations=1000)
+            sample_flare_recovery(target, sec, mission, iterations=2000)
             
