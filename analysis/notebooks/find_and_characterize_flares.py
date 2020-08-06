@@ -33,7 +33,7 @@ CWD = "/".join(os.getcwd().split("/")[:-2])
 import warnings
 warnings.simplefilter("ignore")
 
-def custom_detrend(flc):
+def custom_detrend(flc, target=None):
     t, sflux, model, period = remove_sinusoidal(target, save=False, flc=flc, plot=False, custom=False)
     f = FlareLightCurve(time=t.byteswap().newbyteorder(), 
                         flux = flc.flux,
@@ -49,7 +49,7 @@ def sample_flare_recovery(target, sec, mission, iterations=10):
  
     for i, flc in enumerate(flcs):
 
-        f = custom_detrend(flc)
+        f = custom_detrend(flc, target=target)
 
         flares = f.find_flares().flares
         flares["ID"] = target.ID

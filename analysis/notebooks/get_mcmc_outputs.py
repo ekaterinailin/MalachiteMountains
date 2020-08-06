@@ -128,12 +128,13 @@ def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp):
 if __name__ == "__main__":
 
     # Datasets we analysed
-    datasets = [(277539431, "", "08_07_2020_11_48"),
-                (237880881, "a", "11_02_2020_10_07"),
-                (237880881, "b", "11_02_2020_10_07"),
+    datasets = [#(277539431, "", "08_07_2020_11_48"),
+                #(237880881, "a", "11_02_2020_10_07"),
+                #(237880881, "b", "11_02_2020_10_07"),
+                (44984200, "", "02_08_2020_17_44")
                 ]
 
-    for dataset in range(3):
+    for dataset in range(1):
         # What dataset do you want to analyse?
         ID, suffix, tstamp = datasets[dataset]
 
