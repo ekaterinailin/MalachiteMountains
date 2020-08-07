@@ -45,7 +45,7 @@ import os
 
 
 
-def script_1_plot_spectra(carms, salt, wavmin, wavmax):
+def script_1_plot_spectra(carms, salt, wavmin, wavmax, tstamp):
     # Plot the model spectra together with the SALT spectra
 
     plt.figure(figsize=(10,7))
@@ -483,7 +483,7 @@ if __name__ == "__main__":
     # --------------------------------------
     # SCRIPT 1: JUST PLOT SALT and MODEL SPECTRA
 
-    script_1_plot_spectra(carms, salt, wavmin, wavmax)
+    script_1_plot_spectra(carms, salt, wavmin, wavmax, tstamp)
     # --------------------------------------
 
     # --------------------------------------
