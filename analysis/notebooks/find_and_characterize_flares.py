@@ -28,6 +28,9 @@ from funcs.multiperiod import remove_sinusoidal
 from altaipony.lcio import from_mast
 from altaipony.flarelc import FlareLightCurve
 
+
+from multiprocessing import Pool
+
 CWD = "/".join(os.getcwd().split("/")[:-2])
 
 import warnings
@@ -42,7 +45,8 @@ def custom_detrend(flc, target=None):
     f = f[np.isfinite(f.detrended_flux)]
     return f
 
-def sample_flare_recovery(target, sec, mission, iterations=10):
+def sample_flare_recovery(item, iterations=200):
+    target, sec, mission = item
     flcs = from_mast(f"{target.prefix} {target.ID}", cadence="short", c=sec, mission=mission)
     if mission != "Kepler":
         flcs = [flcs]
@@ -58,11 +62,13 @@ def sample_flare_recovery(target, sec, mission, iterations=10):
 
         # Inj/Rec
         df["dur"] = df.tstop - df.tstart
+        afactor = 5
+        dfactor = 1/afactor
         flc, fake_flc = flc.sample_flare_recovery(inject_before_detrending=True, mode="custom",
                                                   iterations=iterations, fakefreq=1e-3, 
-                                                  ampl=[df.ampl_rec.min()/2, df.ampl_rec.max()*1.5],
-                                                  dur=[df.dur.min()/6., df.dur.max()/4.], 
-                                                  func=custom_detrend)
+                                                  ampl=[df.ampl_rec.min()/2/afactor, df.ampl_rec.max()*1.5/afactor],
+                                                  dur=[df.dur.min()/6./dfactor, df.dur.max()/4./dfactor], 
+                                                  func=custom_detrend, detrend_kwargs={"target":target})
         
         outpath = f"{CWD}/analysis/results/flarefind/{target.ID}_s{sec}_{i}_fake_flares.csv"
         
@@ -84,16 +90,24 @@ def sample_flare_recovery(target, sec, mission, iterations=10):
 
 if __name__ == "__main__":
     
-    sectors = {44984200: [[8, 9, 10], "TESS"],
+    sectors = {44984200: [[8,9,10], "TESS"],#9,,  8
                277539431: [[12],"TESS"],
                237880881: [[1,2],"TESS"],
-               100004076:[[14],"Kepler"],}
-    lcs = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")
+              # 100004076:[[14],"Kepler"],
+              }
     
-
-    for l, target in lcs.iloc[0:-1].iterrows():
-        print(f"Running {target.ID}")
+    print(f"{CWD}/data/summary/lcsi.csv")
+    lcs = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")
+    print(lcs)
+    my_array = []
+    for l, target in lcs.iloc[2:3].iterrows():
+        #print(f"Running {target.ID}")
         secs, mission = sectors[target.ID]
         for sec in secs:
-            sample_flare_recovery(target, sec, mission, iterations=2000)
+            print(target.ID, sec)
+            my_array.append((target, sec, mission))
             
+
+    print(len(my_array))
+    pool = Pool(processes=6)
+    results = pool.map(sample_flare_recovery, my_array)
