@@ -9,7 +9,8 @@ Ekaterina Ilin, 2020, MIT License
 
 
 This script takes the converted_mcmc_sample.csv
-files from the MCMC fitting, add radius of AR,
+files from the MCMC fitting, add radius of AR 
+(in degrees and as fraction of stellar surface),
 flare ED, flare energy, and write out a new table
 with percentiles for each posterior distribution.
 
@@ -18,6 +19,7 @@ read file, add them and save the result to save
 computation time.
 """
 
+import numpy as np
 import pandas as pd
 
 import os
@@ -39,14 +41,19 @@ matplotlib.rc('font', **font)
 
 import matplotlib.pyplot as plt
 
+import time
+
+
 
 style = {'277539431' : ["b","solid"],
-         '100004076' : ["orange",(0, (3, 1, 1, 1, 1, 1))],
-         '44984200' : ["r","dashed"],
+         '100004076' : ["orange","solid"],
+         '44984200' : ["r","solid"],
+         '44984200a' : ["r","dashed"],
+         '44984200b' : ["r","dashed"],
          '237880881a' : ["grey","dotted"],
          '237880881b' : ["grey","dashdot"]}
 
-def write_mcmc_output(resultframe, tstamp, ID, suffix, CWD):
+def write_mcmc_output(resultframe, tstamp, ID, suffix, CWD, metatstamp):
     af = resultframe.quantile([.16,0.5,.84], axis=0)
 
     series = (pd.Series(af.loc[.16,]).
@@ -64,8 +71,10 @@ def write_mcmc_output(resultframe, tstamp, ID, suffix, CWD):
 
     with open(f"{CWD}/analysis/results/mcmc/mcmcoutput.csv","a") as f:
         #Add more lines here
-
-
+        pd.DataFrame(series).T.to_csv(f, index=False)
+        
+    with open(f"{CWD}/analysis/results/mcmc/{metatstamp}_mcmcoutput.csv","a") as f:
+        #Add more lines here
         pd.DataFrame(series).T.to_csv(f, index=False)
 
 def write_meta_mcmc(CWD, tstamp, ID, burnin, steps, walkers, ndim):
@@ -91,7 +100,16 @@ def get_rad_r_and_plot(ID, resultframe, Fth, qlum, R, CWD, tstamp):
                 dpi=300)
     return resultframe
 
-def get_ED_and_plot(ID, resultframe, lc, CWD, tstamp):
+def get_frac_area(ID, resultframe, Fth, qlum, R, CWD, tstamp):
+    if "rad_rsun" not in resultframe.columns:
+        g = lambda x: calculate_angular_radius(Fth, x.a, qlum, R)
+        resultframe["rad_rsun"] = resultframe.apply(g, axis=1)
+
+    resultframe["frac_area"] = np.sin(resultframe.rad_rsun / 180 * np.pi / 2.)**2
+    return resultframe
+
+
+def get_ED_and_plot(ID, resultframe, lc, CWD, tstamp, suffix):
     
     if "ED_s" not in resultframe.columns:
         g = lambda x: calculate_ED(lc.t.values, x.t0_d, x.fwhm_d, x.a)
@@ -101,12 +119,12 @@ def get_ED_and_plot(ID, resultframe, lc, CWD, tstamp):
          histtype="step", color="k", linewidth=2);
     plt.xlabel("ED [s]")
     plt.savefig(f"{CWD}/analysis/plots/mcmc/"
-                f"{tstamp}_{ID}_flare_ED.png",
+                f"{tstamp}_{ID}{suffix}_flare_ED.png",
                 dpi=300)
     return resultframe
     
 
-def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp):
+def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp, suffix):
     
     if "ED_s" not in resultframe.columns:
         get_ED_and_plot(resultframe, lc, CWD)
@@ -114,27 +132,34 @@ def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp):
     if "Eflare_erg" not in resultframe.columns:
         g = lambda x: x.ED_s * qlum.value
         resultframe["Eflare_erg"] = resultframe.apply(g, axis=1)
-        
-    plt.hist(resultframe.Eflare_erg.values, bins=200, 
+   
+    hist, bins, p = plt.hist(resultframe.Eflare_erg.values, bins=200, 
          histtype="step", color="k", linewidth=2);
+
     plt.xlabel(r"$E_f$ [erg]")
     plt.savefig(f"{CWD}/analysis/plots/mcmc/"
-                f"{tstamp}_{ID}_flare_E.png",
+                f"{tstamp}_{ID}{suffix}_flare_E.png",
                 dpi=300)
     return resultframe
 
 
 
 if __name__ == "__main__":
+    
+    # time stamp for backup
+    metatstamp = time.strftime("%d_%m_%Y", time.localtime())
 
     # Datasets we analysed
-    datasets = [#(277539431, "", "08_07_2020_11_48"),
-                #(237880881, "a", "11_02_2020_10_07"),
-                #(237880881, "b", "11_02_2020_10_07"),
-                (44984200, "", "02_08_2020_17_44")
+    datasets = [(277539431, "", "08_07_2020_11_48"),
+                (237880881, "a", "11_02_2020_10_07"),
+                (237880881, "b", "11_02_2020_10_07"),
+                (44984200, "", "02_08_2020_17_44"),
+                (44984200, "a", "04_08_2020_13_40"),
+                (44984200, "b", "04_08_2020_13_40"),
+                (100004076, "", "04_08_2020_14_26"),
                 ]
 
-    for dataset in range(1):
+    for dataset in range(7):
         # What dataset do you want to analyse?
         ID, suffix, tstamp = datasets[dataset]
 
@@ -165,19 +190,23 @@ if __name__ == "__main__":
         # ----------------------------------------------
 
         # Get radius of AR distribution and plot a histogram
-        resultframe = get_rad_r_and_plot(ID,resultframe, Fth, qlum, R, CWD, tstamp)
+        resultframe = get_rad_r_and_plot(ID, resultframe, Fth, qlum, R, CWD, tstamp)
+        
+        # Convert radius to fraction of stellar surface
+        get_frac_area(ID, resultframe, Fth, qlum, R, CWD, tstamp)
 
         # Get ED distribution and plot a histogram
-        resultframe = get_ED_and_plot(ID, resultframe, lc, CWD, tstamp)
+        resultframe = get_ED_and_plot(ID, resultframe, lc, CWD, tstamp, suffix)
 
         # Get E distribution and plot a histogram
-        resultframe = get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp)
+        resultframe = get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp, suffix)
 
         # CALCULATE PERCENTILES FOR ALL MCMC OUTPUTS AND THE NEW ONES
         # ----------------------------------------------
+        print(resultframe.columns)
 
         # Write percentiles to table
-        write_mcmc_output(resultframe, tstamp, ID, suffix, CWD)
+        write_mcmc_output(resultframe, tstamp, ID, suffix, CWD, metatstamp)
 
         # ADD NEW COLUMNS TO MCMC SAMPLE FILE
         # -----------------------------------------------
