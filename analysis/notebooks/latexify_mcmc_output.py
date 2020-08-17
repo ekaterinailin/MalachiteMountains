@@ -81,12 +81,16 @@ if __name__ == "__main__":
     for col in ['fwhm_d_16', 'fwhm_d_50', 'fwhm_d_84']:
         df[col] = df[col].astype(float) / 2.
 
-
+    # Drop columns
+    for i in ["_16","_50","_84"]:
+        df = df.drop(f"rad_rsun{i}", axis=1)
+    
     # What values do you want to convert and how to call them                                
     valout = [("t0_d", "$t_0$ (BJD)"),
               ("Eflare_erg","$E_{f}$ (erg)"),
               ("ED_s", "$ED$ (s)"),
-              ("rad_rsun", "$\omega/2$ (deg)"),
+              ("frac_area","$A/A_*$"),
+             # ("rad_rsun", "$\omega/2$ (deg)"),
               ("phase_deg","$\phi_0$ (deg)"),
               ("a","$a$"),
               ("i_deg","$i$ (deg)"),
@@ -100,7 +104,9 @@ if __name__ == "__main__":
         cp = add_val_with_percentiles(df, val, out)
 
     # Merge ID and suffix
-    cp["ID"] = cp.ID + cp.suffix                               
+    # Suffix should not resemble exoplanets
+    mapsuffix = {"a":" (I)", "b": " (II)", "":"", np.nan:""}
+    cp["ID"] = cp.ID + cp.suffix.map(mapsuffix)                               
 
 
     # Remove helper columns

@@ -557,6 +557,9 @@ def black_body_spectrum(wav, t):
     return (( (2 * np.pi * h * c**2) / (wav**5) / (np.exp( (h * c) / (wav * k_B * t) ) - 1))
             .to("erg*s**(-1)*cm**(-3)")) #simplify the units
 
+# ---------------------------------------------------------------------------------
+# calculate_specific_flare_flux WAS NOT USED!
+# delete or comment out!
 
 def calculate_specific_flare_flux(mission, flaret=1e4):
     """Get the flare area in rel. unit
@@ -599,7 +602,7 @@ def calculate_specific_flare_flux(mission, flaret=1e4):
     # spectrum times the response curve over wavelength:
     return np.trapz(thermf * rres, x=w).to("erg*cm**(-2)*s**(-1)")
 
-
+# ---------------------------------------------------------------------------------
 
 def calculate_angular_radius(Fth, a, qlum, R):
     """Calculate angular radius in degrees from. Do the integration
