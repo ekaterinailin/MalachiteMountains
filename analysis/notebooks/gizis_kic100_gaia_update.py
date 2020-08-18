@@ -43,8 +43,7 @@ import corner
 import emcee
 
 import time
-# Create a time stamp for this run
-tstamp = time.strftime("%d_%m_%Y", time.localtime())
+
 
 
 def model(d, R, i, P):
@@ -154,12 +153,16 @@ def log_probability(theta, P, logLobs, logLerr):
 
 
 if __name__ == "__main__":
+    # Create a time stamp for this run
+    tstamp = time.strftime("%d_%m_%Y_GizisParallax", time.localtime()) 
 
-    p = 59.671 # Gaia parallax
-    ep = 0.1363 # Gaia parallax error
+    #p = 59.671 # Gaia parallax
+    #ep = 0.1363 # Gaia parallax error
+    p=61.15 # Gizis parallax
+    ep= 1.30 # Gizis parallax error
     
     # number of steps in MCMC
-    N = 100
+    N = 50
 
     gaia_d = []
     gaia_logL = []
@@ -237,7 +240,7 @@ if __name__ == "__main__":
 
     # convert i from rad to deg
     samples[:,2] = samples[:,2] / np.pi * 180. 
-
+    
     fig = corner.corner(samples)
 
     cornerpath = (f"{CWD}/analysis/plots/Gizis_KIC100_Gaia_Update/"
@@ -250,6 +253,10 @@ if __name__ == "__main__":
         vals = np.percentile(samples[:, num], [50, 84, 16])
         df[f"{val}_posterior"] = [vals[0], vals[1] - vals[0], vals[0] - vals[2]]
 
+    # Get values for d, R and i from posterior    
+    for num, val in [(0,"d"), (1,"R"),(2,"i")]:
+        vals = np.percentile(samples[:, num], [5, 50, 95])
+        df[f"{val}_5_50_95"] = [vals[0], vals[1], vals[2]]
 
     # For completeness: add Gizis+2013 Table 1 values for Teff and vsini
     df["Teff_Gizis"] = [2300, 75, 75]

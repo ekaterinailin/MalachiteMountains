@@ -63,6 +63,8 @@ if __name__ == "__main__":
     # write rotation period to string
     dff[r"$P$ (h)"] = dff.Prot_d.apply(lambda x:
                                        f"{x * 24.:.1f}(0.03)")
+    # Kepler
+    dff.loc[dff.ID == "KIC 100", r"$P$ (h)"] = dff.loc[dff.ID == "KIC 100", r"$P$ (h)"].str.replace("0.03","0.00") 
 
     # Sort by SpT and pick the relevant columns
     dfff = dff.sort_values(by="SpT", ascending=True)
