@@ -52,6 +52,12 @@ if __name__ == "__main__":
     lcs = lcs.set_index("ID")
     lcs = lcs.dropna(subset=["vsini_kms"])
     lcs = lcs[lcs.index!=230120143] # Remove leftover row
+    
+    # REPLACE 277 and 449 BY ESTIMATED ISIGMA OF about 3km/s
+    #
+    #
+    #
+    #
 
 
     # Plot priors on inclinations
@@ -79,6 +85,7 @@ if __name__ == "__main__":
 
     # Add rows as input for MCMC later
     lcs["i_mu"] = lcs.apply(lambda x: calculate_inclination(x)[0].to("rad").value, axis=1)
+    # REPLACE 277 and 449 BY ESTIMATED ISIGMA OF about 3km/s
     lcs["i_sigma"] = lcs.apply(lambda x: calculate_inclination(x)[1].to("rad").value, axis=1)
 
     print("\n Output table: \n ---------------- \n")
