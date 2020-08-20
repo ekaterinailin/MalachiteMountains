@@ -145,8 +145,8 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = '100004076'#input("ID? ")
-    tstamp = '18_08_2020_15_38'#input("tstamp? ")
+    ID = ''#input("ID? ")
+    tstamp = ''#input("tstamp? ")
     Nsteps = 1000000#input("Number of steps? ")
     nflares = 1
     nars = 1

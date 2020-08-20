@@ -44,7 +44,7 @@ if __name__ == "__main__":
     paperpath = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft"
 
     # get data on LCs and stars
-    lcs = pd.read_csv(f"{CWD}/data/summary/lcsvsini.csv")
+    lcs = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")#vsin
     props = pd.read_csv(f"{CWD}/data/summary/properties.csv")
 
     # table engineering
@@ -53,17 +53,12 @@ if __name__ == "__main__":
     lcs = lcs.dropna(subset=["vsini_kms"])
     lcs = lcs[lcs.index!=230120143] # Remove leftover row
     
-    # REPLACE 277 and 449 BY ESTIMATED ISIGMA OF about 3km/s
-    #
-    #
-    #
-    #
 
 
     # Plot priors on inclinations
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(14,5))
     for l, target in lcs.iterrows():
-
+       # print(target)
         # Get inclinations
         i_mu, i_sigma, sini, esini= calculate_inclination(target)
 
@@ -74,18 +69,17 @@ if __name__ == "__main__":
         x = np.linspace(0,np.pi/2,200)
         axs[0].plot(x / np.pi * 180.,
                     gaussian(x, i_mu.to("rad").value, i_sigma.to("rad").value),
-                    label=f"{target.prefix} {l}")
+                    label=f"{target.prefix} {target.ID}")
 
     # Layout figure
     axs[0].set_xlabel(r"$i$ [deg]", fontsize=14)
     axs[1].set_xlabel(r"$\sin i$", fontsize=14)
     axs[0].legend(loc=2, frameon=False)
 
-    plt.savefig(f"{paperpath}/figures/{tstamp}_inclination.png",dpi=300)
+    plt.savefig(f"{CWD}/data/summary/{tstamp}_inclination.png",dpi=300)
 
     # Add rows as input for MCMC later
     lcs["i_mu"] = lcs.apply(lambda x: calculate_inclination(x)[0].to("rad").value, axis=1)
-    # REPLACE 277 and 449 BY ESTIMATED ISIGMA OF about 3km/s
     lcs["i_sigma"] = lcs.apply(lambda x: calculate_inclination(x)[1].to("rad").value, axis=1)
 
     print("\n Output table: \n ---------------- \n")

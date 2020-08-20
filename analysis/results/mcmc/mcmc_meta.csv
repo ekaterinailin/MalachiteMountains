@@ -26,3 +26,5 @@ date,ID,burnin,steps,walkers,ndim
 04_08_2020_14_26,100004076,1018,499488,6,6
 date,ID,burnin,steps,walkers,ndim
 18_08_2020_15_38,100004076,1191,404576,6,6
+date,ID,burnin,steps,walkers,ndim
+18_08_2020_15_42,100004076,100000,356000,6,6

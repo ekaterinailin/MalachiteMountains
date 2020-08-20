@@ -200,7 +200,7 @@ def calculate_inclination(s, eP=1./24/30):
     # Get radius und and period, plus their uncerainties
     R, P = s.rad * R_sun, s.Prot_d * u.d
     eR, eP = s.rad_err * R_sun, eP * u.d
-    
+    print(s.ID, s.e_vsini_kms)
     # Get vsini and its uncertainty
     vsini = s.vsini_kms * u.km / u.s
     evsini = s.e_vsini_kms * u.km / u.s
