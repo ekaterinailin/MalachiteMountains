@@ -145,10 +145,10 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = '44984200'#input("ID? ")
-    tstamp = '04_08_2020_13_40'#input("tstamp? ")
+    ID = ''#input("ID? ")
+    tstamp = ''#input("tstamp? ")
     Nsteps = 1000000#input("Number of steps? ")
-    nflares = 2
+    nflares = 1
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 
