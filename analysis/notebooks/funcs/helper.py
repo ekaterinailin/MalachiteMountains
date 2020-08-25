@@ -12,8 +12,8 @@ from altaipony.lcio import from_path
 
 import sys, os
 
-CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
-#CWD = "/home/ekaterina/Documents/001_science/MalachiteMountains/data/lcs"
+#CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
+CWD = "/home/ekaterina/Documents/001_science/MalachiteMountains/data/lcs"
 
 # We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
 
