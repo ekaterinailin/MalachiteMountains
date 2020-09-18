@@ -124,17 +124,17 @@ if __name__ == "__main__":
 
     # write vsini with uncertainties to str
     cp[r"$v \sin i$ (km/s)"] = cp.apply(lambda x: 
-                                          fr"${x.vsini_kms:.1f}({x.e_vsini_kms:.1f})$",
+                                          fr"${x.vsini_kms:.1f}({x.e_vsini_kms *1e1:.0f})$",
                                           axis=1)
     
     # write Rstart with uncertainties to str
     cp[r"$R_*/R_\odot$"] = cp.apply(lambda x: 
-                                          fr"${x.rad_rsun:.2f}({x.e_rad_rsun:.1f})$",
+                                          fr"${x.rad_rsun:.2f}({x.e_rad_rsun * 1e2:.0f})$",
                                           axis=1)
 
     # write rotation period to string
     cp[r"$P$ (h)"] = cp.apply(lambda x:
-                                       f"{x.prot_d * 24.:.1f}({x.e_prot_d * 24.:.1f})", axis=1)
+                                       f"{x.prot_d * 24.:.4f}({x.e_prot_d * 24. * 1e4:.0f})", axis=1)
     
     # rename spt to SpT
     cp = cp.rename(index=str, columns={"spt":"SpT"})
