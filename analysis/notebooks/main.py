@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -6,8 +7,8 @@ import pandas as pd
 import emcee
 
 from funcs.flarefit import (log_probability,
-                            log_probability_2flares,
-                            log_probability_2flares2ars)
+                            log_probability_2flares)
+from get_mcmc_outputs import write_meta_mcmc
 
 from astropy.constants import R_sun
 import astropy.units as u
@@ -16,8 +17,7 @@ from multiprocessing import Pool
 import time
 
 log_probs = {"log_probability":[6, log_probability],
-             "log_probability_2flares":[9, log_probability_2flares],
-             "log_probability_2flares2ars":[10, log_probability_2flares2ars],}
+             "log_probability_2flares":[9, log_probability_2flares]}
 
 CWD = "/".join(os.getcwd().split("/")[:-2])
 nwalkers = 32
@@ -93,22 +93,40 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
 
     # Set up the backend
     # Don't forget to clear it in case the file already exists
-    filename = f"{CWD}/analysis/results/mcmc/{target.tstamp}_{target.ID}{suffix}_MCMC.h5"
-    backend = emcee.backends.HDFBackend(filename)
+    filename = f"{CWD}/analysis/results/mcmc/{target.tstamp}_{target.ID}{suffix}_MCMC.txt"
+    
+    # Get prior distribution for inclination 
+    inclination_path =  f"{CWD}/data/inclinations/{target.ID}_post_compound.p"
+    gload = pickle.load( open( inclination_path, "rb" ) )
+    
+    backend = emcee.backends.Backend()
     backend.reset(nwalkers, ndim)
     args = (phi, flux, flux_err, qlum,
                 Fth, (target.R_Rsun*R_sun).to("cm"), 
-                target['median'], {"i_mu":target.i_mu, "i_sigma":target.i_sigma})
-    
+                target['median'], {})
+    kwargs = {"g":gload}
 
     with Pool(7) as pool:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probs[target.log_prob][1],
-                                        args=args,backend=backend,pool=pool)
+                                        args=args,kwargs=kwargs, backend=backend,pool=pool)#
         start = time.time()
         sampler.run_mcmc(pos, Nsteps, progress=True, store=True)
         end = time.time()
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
+        
+    tau = 2#sampler.get_autocorr_time()
+    burnin = int(2 * np.max(tau))
+    thin = int(0.5 * np.min(tau))    
+    samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
+    
+    columns = ["phase_peak","latitude_rad","a","fwhm_periods","i_rad","phase_0"]
+    rawsamples = pd.DataFrame(data=samples, columns=columns)
+    rawsamples.to_csv(f"{CWD}/analysis/results/mcmc/{tstamp}_{target.ID}_raw_mcmc_sample.csv",index=False)
+
+    
+    write_meta_mcmc(CWD, tstamp, target.ID, burnin, samples.shape[0], samples.shape[1], ndim)
+    
 
 
 def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
@@ -118,6 +136,11 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
     
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}{suffix}_MCMC.h5"
     new_backend = emcee.backends.HDFBackend(filename)
+    
+    # Get prior distribution for inclination 
+    inclination_path =  f"{CWD}/data/inclinations/{target.ID}_post_compound.p"
+    gload = pickle.load( open( inclination_path, "rb" ) )
+    
     print(f"Initial size: {filename} {new_backend.iteration}")
     print(f"Dimensions: {ndim}")
           
@@ -131,8 +154,7 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
                                         args=(phi, flux, flux_err, qlum,
                                               Fth, (target.R_Rsun*R_sun).to("cm"), 
                                               target['median'],
-                                              {"i_mu":target.i_mu,
-                                              "i_sigma":target.i_sigma}),
+                                              {"g":gload}),
                                         backend=new_backend,pool=pool)
             start = time.time()
             new_sampler.run_mcmc(None, Nsteps, progress=True, store=True)
@@ -145,9 +167,9 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = ''#input("ID? ")
-    tstamp = ''#input("tstamp? ")
-    Nsteps = 1000000#input("Number of steps? ")
+    ID = '44984200'#input("ID? ")
+    tstamp = '22_09_2020_09_37'#input("tstamp? ")
+    Nsteps = 50#input("Number of steps? ")
     nflares = 1
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
