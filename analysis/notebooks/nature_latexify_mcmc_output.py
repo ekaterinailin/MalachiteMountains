@@ -38,29 +38,24 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
     df["vplus"] = df.apply(lambda x: x[val+suff[2]]-x[val+suff[1]], axis=1)
     df["vminus"] = df.apply(lambda x: x[val+suff[1]]-x[val+suff[0]], axis=1)
     power = int(np.round(np.log10(np.abs(float(np.min(df.vplus))))))
-    #print(power, "POWER")
+    print(power, "POWER")
     powerabs = int(np.round(np.log10(np.abs(float(np.min( df[val+suff[1]]))))))
-    #print(powerabs, "POWERABS")
-    if abs(powerabs) > 5:
+    print(powerabs, "POWERABS")
+    
+    if abs(powerabs) > 4:
+        
         out = out + f"$\cdot 10^{powerabs}"
         out = out.replace("^","^{")
         out = out + "}$"
-        df.vminus = df.vminus/(10**(power))
-        df.vplus = df.vplus/(10**(power))
+        df.vminus = df.vminus/(10**(powerabs))
+        df.vplus = df.vplus/(10**(powerabs))
         df[val+suff[1]] = df[val+suff[1]]/(10**powerabs)
-        
-        df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{powerabs-power}f}\left(^{x.vplus:.0f}_{x.vminus:.0f}\right)$", axis=1)
+        print(powerabs, power, df.vplus, df.vminus, df[val+suff[1]])
+        df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{powerabs-power}f}\left(^{x.vplus:.{powerabs-power}f}_{x.vminus:.{powerabs-power}f}\right)$", axis=1)
         df[out] = df[out].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
     else:
-        #print(df.vplus/(10**power))
-        if (df.vplus/(10**power)<1).any():
-            power -= 1
-            #print("TRUE")
-        if powerabs - power < 0:
-            raise ValueError("uncertainty larger than 50th percentile")
-        if power < 0: r = abs(power)
-        elif power >= 0: r = 0
-        df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{r}f}\left(^{x.vplus/(10**power):.0f}_{x.vminus/(10**power):.0f}\right)$", axis=1)
+        r = powerabs-power
+        df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{r}f}\left(^{x.vplus:.{r}f}_{x.vminus:.{r}f}\right)$", axis=1)
         df[out] = df[out].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
                                         
     
@@ -79,7 +74,7 @@ if __name__ == "__main__":
     
     # Get properties, and add them to the table
     prop = pd.read_csv(f"{CWD}/data/summary/inclination_input.csv")
-    prop['id'] = prop['id'].astype(str) 
+    #prop['id'] = prop['id'].astype(str) 
     
     df = df.merge(prop, left_on="ID", right_on="id", how="left")
     
@@ -115,7 +110,7 @@ if __name__ == "__main__":
     # Merge ID and suffix
     # Suffix should not resemble exoplanets
     mapsuffix = {"a":" (I)", "b": " (II)", "":"", np.nan:""}
-    cp["ID"] = cp.prefix + " " + cp.ID.str[:3] + cp.suffix.map(mapsuffix)                               
+    cp["ID"] = cp.prefix + " " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
 
 
     # convert Prot, vsini, Rstar, and later i
@@ -124,17 +119,17 @@ if __name__ == "__main__":
 
     # write vsini with uncertainties to str
     cp[r"$v \sin i$ (km/s)"] = cp.apply(lambda x: 
-                                          fr"${x.vsini_kms:.1f}({x.e_vsini_kms *1e1:.0f})$",
+                                          fr"${x.vsini_kms:.1f}({x.e_vsini_kms :.1f})$",
                                           axis=1)
     
     # write Rstart with uncertainties to str
     cp[r"$R_*/R_\odot$"] = cp.apply(lambda x: 
-                                          fr"${x.rad_rsun:.2f}({x.e_rad_rsun * 1e2:.0f})$",
+                                          fr"${x.rad_rsun:.2f}({x.e_rad_rsun:.2f})$",
                                           axis=1)
 
     # write rotation period to string
     cp[r"$P$ (h)"] = cp.apply(lambda x:
-                                       f"{x.prot_d * 24.:.4f}({x.e_prot_d * 24. * 1e4:.0f})", axis=1)
+                                       f"{x.prot_d * 24.:.4f}({x.e_prot_d * 24.:.4f})", axis=1)
     
     # rename spt to SpT
     cp = cp.rename(index=str, columns={"spt":"SpT"})
