@@ -191,10 +191,10 @@ def log_prior_2flares(theta, phi_a_min=(0,0),
 
 
 
-def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kwargs):
+def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kww, g=None):
     """Posterior probability to pass to MCMC sampler.
     """
-    lp = log_prior_2flares(theta, **kwargs)
+    lp = log_prior_2flares(theta, g=g, **kww)
 
     if not np.isfinite(lp):
         return -np.inf
@@ -209,6 +209,9 @@ def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kw
         return -np.inf
     
     return lp + ll
+
+
+ 
 
 def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """Log likelihood function assuming

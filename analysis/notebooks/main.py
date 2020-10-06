@@ -47,12 +47,12 @@ def get_inits_one(ID, tstamp):
                         target.a, target.fwhm, 
                         target.i_mu, target.phi0]
     
-    return ndim, inits, phi, flux, flux_err, qlum, Fth, target
+    return ndim, inits, phi, flux, flux_err, qlum, Fth, target, lc
 
 def get_inits_multi(ID, tstamp, nars=1):
     
-    ndim, inits_a, phi, flux, flux_err, qlum, Fth, target = get_inits_one(ID+"a", tstamp)
-    ndim, inits_b, phi, flux, flux_err, qlum, Fth, target = get_inits_one(ID+"b", tstamp)
+    ndim, inits_a, phi, flux, flux_err, qlum, Fth, target, lc = get_inits_one(ID+"a", tstamp)
+    ndim, inits_b, phi, flux, flux_err, qlum, Fth, target, lc = get_inits_one(ID+"b", tstamp)
     
     inits_a.insert(1, inits_b[0])
     inits_a.insert(4, inits_b[2])
@@ -71,7 +71,7 @@ def get_inits_multi(ID, tstamp, nars=1):
         assert inits_a[7]==inits_b[3]
     print(target.ID, "ID")
     
-    return ndim, inits_a, phi, flux, flux_err, qlum, Fth, target
+    return ndim, inits_a, phi, flux, flux_err, qlum, Fth, target, lc
 
 
 def get_inits(ID, tstamp, nflares, nars):
@@ -86,10 +86,16 @@ def get_inits(ID, tstamp, nflares, nars):
 def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
 
     parameters, suffix = get_inits(ID, tstamp, nflares, nars)
-    ndim, inits, phi, flux, flux_err, qlum, Fth, target = parameters
+    ndim, inits, phi, flux, flux_err, qlum, Fth, target, lc = parameters
     
     inits = [a for a in inits]
     pos = inits * (1. + wiggle * np.random.randn(nwalkers, ndim))
+    
+    # Get Prot_d
+    props = pd.read_csv(f"{CWD}/data/summary/everything.csv")
+
+    Prot_d = props[props.ID == int(ID)].iloc[0].Prot_d
+    print(Prot_d)
 
     # Set up the backend
     # Don't forget to clear it in case the file already exists
@@ -115,14 +121,111 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
         
-    tau = 2#sampler.get_autocorr_time()
-    burnin = int(2 * np.max(tau))
-    thin = int(0.5 * np.min(tau))    
-    samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
+     samples = sampler.get_chain(discard=100000, flat=True, thin=50)
     
-    columns = ["phase_peak","latitude_rad","a","fwhm_periods","i_rad","phase_0"]
-    rawsamples = pd.DataFrame(data=samples, columns=columns)
-    rawsamples.to_csv(f"{CWD}/analysis/results/mcmc/{tstamp}_{target.ID}_raw_mcmc_sample.csv",index=False)
+    if ndim==6:
+        
+        columns = ["phase_peak","latitude_rad","a","fwhm_periods","i_rad","phase_0"]
+        rawsamples = pd.DataFrame(data=samples, columns=columns)
+        rawsamples.to_csv(f"{CWD}/analysis/results/mcmc/{tstamp}_{target.ID}_raw_mcmc_sample.csv",index=False)
+        
+        # map phi0 to phi_peak longitude, still call it phi0
+        samples[:, -1] = (samples[:, 0]%(2.*np.pi) - samples[:, -1]) / np.pi * 180. # 0 would be facing the observer
+
+        #map phi_a_distr to t0_distr:
+        samples[:, 0] = np.interp(samples[:,0],lc.phi,lc.t)
+
+        # convert theta_f to degrees
+        samples[:, 1] = samples[:, 1] / np.pi * 180.
+
+        # convert FWHM to days
+        samples[:, 3] = samples[:, 3]/2/np.pi * Prot_d 
+
+        # convert i to degrees
+        samples[:, -2] = samples[:, -2] / np.pi * 180.
+
+        columns = ["t0_d","latitude_deg","a",
+                  "fwhm_d","i_deg","phase_deg"]
+
+        resultframe = pd.DataFrame(data=samples,
+                                columns=columns)
+
+        resultframe.to_csv(f"{CWD}/analysis/results/mcmc/"
+                        f"{target.ID}_{tstamp}_converted_mcmc_sample.csv",
+                        index=False)
+        
+    elif ndim==9:
+        
+        columns = ["phase_peak_a", "phase_peak_b", "latitude_rad",
+                   "a_a", "a_b", "fwhm_periods_a", "fwhm_periods_b",
+                   "i_rad","phase_0"]
+
+        rawsamples = pd.DataFrame(data=samples, columns=columns)
+
+        for suffix in ["a","b"]:
+            rawsamples1 = rawsamples[[f"phase_peak_{suffix}",
+                                    "latitude_rad",
+                                    f"a_{suffix}",
+                                    f"fwhm_periods_{suffix}",
+                                    "i_rad",
+                                    "phase_0"]]
+            rawsamples2 = rawsamples1.rename(index=str, 
+                                            columns=dict(zip([f"phase_peak_{suffix}",
+                                                            f"a_{suffix}",
+                                                            f"fwhm_periods_{suffix}"],
+                                                            ["phase_peak",
+                                                            "a",
+                                                            "fwhm_periods"])))
+            rawsamples2.to_csv(f"{CWD}/analysis/results/mcmc/"
+                            f"{tstamp}_{target.ID}{suffix}"
+                            f"_raw_mcmc_sample.csv",
+                            index=False)
+            
+            
+        #map phi_a_distr to t0_distr:
+        for i in [0,1]:
+            samples[:, i] = np.interp(samples[:,i],lc.phi,lc.t)
+
+        # convert theta_f to degrees
+        samples[:, 2] = samples[:, 2] / np.pi * 180.
+
+        # convert FWHM to days
+        for i in [5,6]:
+            samples[:, i] = samples[:, i]/2/np.pi * Prot_d 
+
+        # convert i to degrees
+        samples[:, -2] = samples[:, -2] / np.pi * 180.
+
+        # map phi0 to phi_peak longitude, still call it phi0
+        samples[:, -1] = (samples[:, 0]%(2.*np.pi) - samples[:, -1]) / np.pi * 180. # 0 would be facing the observer
+
+        columns = ["t0_d_a","t0_d_b","latitude_deg",
+                   "a_a","a_b","fwhm_d_a", 
+                   "fwhm_d_b","i_deg","phase_deg"]
+
+        rawsamples = pd.DataFrame(data=samples, columns=columns)
+
+        for suffix in ["a","b"]:
+            rawsamples1 = rawsamples[[f"t0_d_{suffix}",
+                                    "latitude_deg",
+                                    f"a_{suffix}",
+                                    f"fwhm_d_{suffix}",
+                                    "i_deg",
+                                    "phase_deg"]]
+            rawsamples2 = rawsamples1.rename(index=str, 
+                                            columns=dict(zip([f"t0_d_{suffix}",
+                                                            f"a_{suffix}",
+                                                            f"fwhm_d_{suffix}"],
+                                                            ["t0_d",
+                                                            "a",
+                                                            "fwhm_d"])))
+            rawsamples2.to_csv(f"{CWD}/analysis/results/mcmc/"
+                            f"{tstamp}_{target.ID}{suffix}"
+                            f"_converted_mcmc_sample.csv",
+                            index=False)
+
+
+
 
     
     write_meta_mcmc(CWD, tstamp, target.ID, burnin, samples.shape[0], samples.shape[1], ndim)
@@ -167,10 +270,10 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
     
-    ID = '44984200'#input("ID? ")
-    tstamp = '22_09_2020_09_37'#input("tstamp? ")
-    Nsteps = 50#input("Number of steps? ")
-    nflares = 1
+    ID = '237880881'#input("ID? ")
+    tstamp = '03_10_2020_11_29'#input("tstamp? ")
+    Nsteps = 1000000#input("Number of steps? ")
+    nflares = 2
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 
