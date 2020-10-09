@@ -69,14 +69,19 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
 if __name__ == "__main__":
     # Get results table that you want to convert:
     CWD = "/".join(os.getcwd().split("/")[:-2])
-    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/mcmcoutput.csv")
+    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/mcmcoutput.csv").iloc[:7]
     df = df.drop_duplicates(keep=False).fillna("")
     
     # Get properties, and add them to the table
     prop = pd.read_csv(f"{CWD}/data/summary/inclination_input.csv")
-    #prop['id'] = prop['id'].astype(str) 
+    prop['id'] = prop['id'].astype(str) 
+    
+    # get inclinations frm Elisabeth
+    incl = pd.read_csv(f"{CWD}/data/inclinations/inclination_output.dat", delimiter=r"\s+")
+    incl['id'] = incl['id'].astype(str)
     
     df = df.merge(prop, left_on="ID", right_on="id", how="left")
+    df = df.merge(incl, left_on="ID", right_on="id", how="left")
     
     print(df.columns, df.shape, df.T)
 
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     # Merge ID and suffix
     # Suffix should not resemble exoplanets
     mapsuffix = {"a":" (I)", "b": " (II)", "":"", np.nan:""}
-    cp["ID"] = cp.prefix + " " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
+    cp["ID"] = cp.prefix_y + " " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
 
 
     # convert Prot, vsini, Rstar, and later i
@@ -131,6 +136,13 @@ if __name__ == "__main__":
     cp[r"$P$ (h)"] = cp.apply(lambda x:
                                        f"{x.prot_d * 24.:.4f}({x.e_prot_d * 24.:.4f})", axis=1)
     
+    #write inclination
+    cp[r"$i$ (deg)"] = cp.apply(lambda x: f"${x.inclination:.1f}\left(^{x.inclination_uperr:.1f}_{abs(x.inclination_lowerr):.1f}\right)$", axis=1)
+    cp[r"$i$ (deg)"]  = cp[r"$i$ (deg)"].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
+    del cp['inclination']
+    del cp['inclination_uperr']
+    del cp['inclination_lowerr']
+    
     # rename spt to SpT
     cp = cp.rename(index=str, columns={"spt":"SpT"})
     
@@ -141,8 +153,9 @@ if __name__ == "__main__":
     del cp['color']
     del cp['linestyle']
     del cp['suffix']
-    del cp['id']
-    del cp['prefix']
+    for _ in ['x', 'y']:
+        del cp[f'id_{_}']
+        del cp[f'prefix_{_}']
 
     
     # Drop columns
@@ -155,7 +168,7 @@ if __name__ == "__main__":
     
     # select columns
     df3 = df3[["ID","SpT", r"$P$ (h)", r"$v \sin i$ (km/s)", 
-               "$R_*/R_\odot$", r"$E_{f}$ (erg)$\cdot 10^{33}$",
+               "$R_*/R_\odot$", r"$i$ (deg)", r"$E_{f}$ (erg)$\cdot 10^{33}$",
                r"$a$", "$\theta_f$ (deg)", ]]# r"$A/A_*$",
 
    # nc = 'c' * (df3.shape[1]-2) #number of middle columns
@@ -163,7 +176,7 @@ if __name__ == "__main__":
     footnote_pref= "\multicolumn{" + str(df3.shape[1]-2) + "}{l}" 
     footnote_suf = "\n"
 
-    stri = df3.to_latex(index=False,escape=False, column_format=f"lc|ccc|cccr")
+    stri = df3.to_latex(index=False,escape=False, column_format=f"lc|cccc|cccr")
     stri = stri.replace("\\toprule","\hline\hline")
     stri = stri.replace("\\midrule","\hline")
     stri = stri.replace("\\bottomrule","\hline\n" )
