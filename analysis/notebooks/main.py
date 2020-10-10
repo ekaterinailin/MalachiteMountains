@@ -121,7 +121,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
         
-     samples = sampler.get_chain(discard=100000, flat=True, thin=50)
+    samples = sampler.get_chain(discard=100000, flat=True, thin=50)
     
     if ndim==6:
         
