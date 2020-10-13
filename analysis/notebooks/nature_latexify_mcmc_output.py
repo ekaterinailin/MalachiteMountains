@@ -52,11 +52,11 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
         df[val+suff[1]] = df[val+suff[1]]/(10**powerabs)
         print(powerabs, power, df.vplus, df.vminus, df[val+suff[1]])
         df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{powerabs-power}f}\left(^{x.vplus:.{powerabs-power}f}_{x.vminus:.{powerabs-power}f}\right)$", axis=1)
-        df[out] = df[out].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
+        df[out] = df[out].apply(lambda x: x.replace("^","^{+").replace("_","}_{-").replace("\right)","}\right)"))
     else:
         r = powerabs-power
         df[out] = df.apply(lambda x: f"${x[val+suff[1]]:.{r}f}\left(^{x.vplus:.{r}f}_{x.vminus:.{r}f}\right)$", axis=1)
-        df[out] = df[out].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
+        df[out] = df[out].apply(lambda x: x.replace("^","^{+").replace("_","}_{-").replace("\right)","}\right)"))
                                         
     
     del df['vminus'], df['vplus']
@@ -124,21 +124,21 @@ if __name__ == "__main__":
 
     # write vsini with uncertainties to str
     cp[r"$v \sin i$ (km/s)"] = cp.apply(lambda x: 
-                                          fr"${x.vsini_kms:.1f}({x.e_vsini_kms :.1f})$",
+                                          fr"${x.vsini_kms:.1f}$\pm${x.e_vsini_kms :.1f}$",
                                           axis=1)
     
     # write Rstart with uncertainties to str
     cp[r"$R_*/R_\odot$"] = cp.apply(lambda x: 
-                                          fr"${x.rad_rsun:.2f}({x.e_rad_rsun:.2f})$",
+                                          fr"${x.rad_rsun:.3f}$\pm${x.e_rad_rsun:.3f}$",
                                           axis=1)
 
     # write rotation period to string
-    cp[r"$P$ (h)"] = cp.apply(lambda x:
-                                       f"{x.prot_d * 24.:.4f}({x.e_prot_d * 24.:.4f})", axis=1)
+    cp[r"$P$ (min)"] = cp.apply(lambda x:
+                                       fr"{x.prot_d * 24. *60.:.3f}$\pm${x.e_prot_d * 24. *60.:.3f}", axis=1)
     
     #write inclination
     cp[r"$i$ (deg)"] = cp.apply(lambda x: f"${x.inclination:.1f}\left(^{x.inclination_uperr:.1f}_{abs(x.inclination_lowerr):.1f}\right)$", axis=1)
-    cp[r"$i$ (deg)"]  = cp[r"$i$ (deg)"].apply(lambda x: x.replace("^","^{").replace("_","}_{").replace("\right)","}\right)"))
+    cp[r"$i$ (deg)"]  = cp[r"$i$ (deg)"].apply(lambda x: x.replace("^","^{+").replace("_","}_{-").replace("\right)","}\right)"))
     del cp['inclination']
     del cp['inclination_uperr']
     del cp['inclination_lowerr']
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     df3 = cp.copy()
     
     # select columns
-    df3 = df3[["ID","SpT", r"$P$ (h)", r"$v \sin i$ (km/s)", 
+    df3 = df3[["ID","SpT", r"$P$ (min)", r"$v \sin i$ (km/s)", 
                "$R_*/R_\odot$", r"$i$ (deg)", r"$E_{f}$ (erg)$\cdot 10^{33}$",
                r"$a$", "$\theta_f$ (deg)", ]]# r"$A/A_*$",
 
