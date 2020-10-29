@@ -113,7 +113,7 @@ def get_frac_area(ID, resultframe, Fth, qlum, R, CWD, tstamp):
 def get_ED_and_plot(ID, resultframe, lc, CWD, tstamp, suffix):
     
     if "ED_s" not in resultframe.columns:
-        g = lambda x: calculate_ED(lc.t.values, x.t0_d, x.fwhm_d, x.a)
+        g = lambda x: calculate_ED(lc.t.values, x.t0_d, x.fwhm1_d,x.fwhm2_d, x.a)
         resultframe["ED_s"] = resultframe.apply(g, axis=1)
 
     plt.hist(resultframe.ED_s.values, bins=200, 
@@ -154,7 +154,8 @@ if __name__ == "__main__":
     datasets = [#(237880881, "a", "03_10_2020_11_29"),
                 #(237880881, "b", "03_10_2020_11_29"),
                 #(100004076, "", "13_10_2020_10_43"),
-                 (452922110, "", "24_10_2020_18_50")
+                # (452922110, "", "24_10_2020_18_50"),
+                    (452922110, "", "29_10_2020_10_58"),
               #  (277539431, "", "03_10_2020_11_30"),
 #                 (277539431, "", "08_07_2020_11_48"),
 #                 (237880881, "a", "11_02_2020_10_07"),
@@ -171,8 +172,8 @@ if __name__ == "__main__":
 
         # Pick up the input parameters
         CWD = "/".join(os.getcwd().split("/")[:-2])
-        inits = pd.read_csv(f"{CWD}/data/summary/inits.csv")
-        inits = inits[(inits.ID == str(ID)+suffix) &
+        inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled.csv")
+        inits = inits[(inits.ID.astype(str) == str(ID)+suffix) &
                       (inits.tstamp==tstamp)].iloc[0]
 
         qlum = inits.qlum_erg_s * u.erg / u.s

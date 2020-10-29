@@ -772,13 +772,13 @@ def aflare_decoupled(t, tpeak, dur, ampl, upsample=False, uptime=10):
                                             _fr[2]*((x-tpeak)/fwhm1)**2.+  # 2nd order
                                             _fr[3]*((x-tpeak)/fwhm1)**3.+  # 3rd order
                                             _fr[4]*((x-tpeak)/fwhm1)**4. ),# 4th order
-                                 lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm2)*_fd[1] ) +
+                                 lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm1)*_fd[1] ) +
                                             _fd[2]*np.exp( ((x-tpeak)/fwhm2)*_fd[3] ))]
                                 ) * np.abs(ampl) # amplitude
 
     return flare
 
-def calculate_ED(t, t0, dur, ampl):
+def calculate_ED(t, t0, fwhm1, fwhm2, ampl):
     """Calculate equiavlent duration
     of model flare.
     
@@ -797,6 +797,6 @@ def calculate_ED(t, t0, dur, ampl):
     --------
     ED in seconds - float
     """
-    if no_nan_inf([t0, dur, ampl]) == False:
+    if no_nan_inf([t0, fwhm1, fwhm2, ampl]) == False:
         raise ValueError("flaret is NaN or Inf.")
-    return np.sum(np.diff(t) * aflare(t, t0, dur, ampl)[:-1]) * 60.0 * 60.0 * 24.0
+    return np.sum(np.diff(t) * aflare_decoupled(t, t0, (fwhm1,fwhm2), ampl)[:-1]) * 60.0 * 60.0 * 24.0
