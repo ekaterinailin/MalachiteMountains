@@ -60,3 +60,9 @@ date,ID,burnin,steps,walkers,ndim
 24_10_2020_18_50,452922110,1000,96000,6,6
 date,ID,burnin,steps,walkers,ndim
 29_10_2020_07_59,452922110,1000,6080,6,6
+date,ID,burnin,steps,walkers,ndim
+29_10_2020_10_58,452922110,1000,320,7,7
+date,ID,burnin,steps,walkers,ndim
+29_10_2020_10_58,452922110,1000,320,7,7
+date,ID,burnin,steps,walkers,ndim
+29_10_2020_10_58,452922110,1000,5760,7,7

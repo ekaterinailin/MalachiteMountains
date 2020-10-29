@@ -25,7 +25,8 @@ nwalkers = 32
 def get_inits_one(ID, tstamp):
 
     inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled.csv")
-    target = inits.loc[(inits.ID == ID) & (inits.tstamp==tstamp),:].iloc[0]
+    print(inits, inits.ID, ID, inits.tstamp, tstamp)
+    target = inits.loc[(inits.ID == int(ID)) & (inits.tstamp==tstamp),:].iloc[0]
     ndim = int(target.nparam)
 
     assert ndim == log_probs[target.log_prob][0]
@@ -44,7 +45,7 @@ def get_inits_one(ID, tstamp):
     Fth = target.Fth * u.erg / u.s / (u.cm)**2
 
     inits = [target.phi_a, target.theta_a,
-                        target.a, target.fwhm,
+                        target.a, target.fwhm1,target.fwhm2,
                         target.i_mu, target.phi0]
 
     return ndim, inits, phi, flux, flux_err, qlum, Fth, target, lc
@@ -121,9 +122,9 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
 
-    samples = sampler.get_chain(discard=500, flat=True, thin=50)
+    samples = sampler.get_chain(discard=1000, flat=True, thin=50)
 
-    if ndim==6:
+    if ndim==7:
 
         columns = ["phase_peak","latitude_rad","a","fwhm1_periods","fwhm2_periods","i_rad","phase_0"]
         rawsamples = pd.DataFrame(data=samples, columns=columns)
@@ -140,7 +141,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
 
         # convert FWHM1 to days
         samples[:, 3] = samples[:, 3]/2/np.pi * Prot_d
-        
+
         # convert FWHM2 to days
         samples[:, 4] = samples[:, 4]/2/np.pi * Prot_d
 
@@ -157,7 +158,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
                         f"{target.ID}_{tstamp}_converted_mcmc_sample.csv",
                         index=False)
 
-    elif ndim==9:
+    elif ndim==11:
 
         columns = ["phase_peak_a", "phase_peak_b", "latitude_rad",
                    "a_a", "a_b", "fwhm_periods_a", "fwhm_periods_b",
@@ -275,7 +276,7 @@ if __name__ == "__main__":
 # Read ID from keyboard here
 
     ID = '452922110'#input("ID? ")
-    tstamp = '29_10_2020_07_59'#input("tstamp? ")
+    tstamp = '29_10_2020_10_58'#input("tstamp? ")
     Nsteps = 10000#input("Number of steps? ")
     nflares = 1
     nars = 1
