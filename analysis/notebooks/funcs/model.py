@@ -32,7 +32,7 @@ PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
 
 #----------------------------------------------------------------------
 
-def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+def full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
     """Full model.
@@ -45,8 +45,10 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
         latitude of the flaring region in rad
     a : float >0
         relative amplitude of the flare
-    fwhm : float >0
-        FWHM of the flare in fractions of 2pi
+    fwhm1 : float >0
+        rise FWHM of the flare in fractions of 2pi
+    fwhm2 : float >0
+        decay FWHM of the flare in fractions of 2pi
     i : float
         inclination in rad
     phi0 : float (0,2pi)
@@ -72,7 +74,7 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
 
-    flare = aflare(phi, phi_a, fwhm, a*median,)
+    flare = aflare_decoupled(phi, phi_a, (fwhm1, fwhm2), a*median,)
 
     if radius<10: #deg
         latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)

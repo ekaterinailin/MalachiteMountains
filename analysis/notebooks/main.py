@@ -16,15 +16,15 @@ import astropy.units as u
 from multiprocessing import Pool
 import time
 
-log_probs = {"log_probability":[6, log_probability],
-             "log_probability_2flares":[9, log_probability_2flares]}
+log_probs = {"log_probability":[7, log_probability],
+             "log_probability_2flares":[11, log_probability_2flares]}
 
 CWD = "/".join(os.getcwd().split("/")[:-2])
 nwalkers = 32
 
 def get_inits_one(ID, tstamp):
 
-    inits = pd.read_csv(f"{CWD}/data/summary/inits.csv")
+    inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled.csv")
     target = inits.loc[(inits.ID == ID) & (inits.tstamp==tstamp),:].iloc[0]
     ndim = int(target.nparam)
 
@@ -125,7 +125,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
 
     if ndim==6:
 
-        columns = ["phase_peak","latitude_rad","a","fwhm_periods","i_rad","phase_0"]
+        columns = ["phase_peak","latitude_rad","a","fwhm1_periods","fwhm2_periods","i_rad","phase_0"]
         rawsamples = pd.DataFrame(data=samples, columns=columns)
         rawsamples.to_csv(f"{CWD}/analysis/results/mcmc/{tstamp}_{target.ID}_raw_mcmc_sample.csv",index=False)
 
@@ -138,14 +138,17 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         # convert theta_f to degrees
         samples[:, 1] = samples[:, 1] / np.pi * 180.
 
-        # convert FWHM to days
+        # convert FWHM1 to days
         samples[:, 3] = samples[:, 3]/2/np.pi * Prot_d
+        
+        # convert FWHM2 to days
+        samples[:, 4] = samples[:, 4]/2/np.pi * Prot_d
 
         # convert i to degrees
         samples[:, -2] = samples[:, -2] / np.pi * 180.
 
         columns = ["t0_d","latitude_deg","a",
-                  "fwhm_d","i_deg","phase_deg"]
+                  "fwhm1_d","fwhm2_d","i_deg","phase_deg"]
 
         resultframe = pd.DataFrame(data=samples,
                                 columns=columns)

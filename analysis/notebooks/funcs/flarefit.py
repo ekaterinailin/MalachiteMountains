@@ -93,14 +93,15 @@ def log_prior(theta, phi_a_min=0,
     x : array
         time array to constrain start time
     """
-    phi_a, theta_a, a, fwhm, i, phi0 =  theta
+    phi_a, theta_a, a, fwhm1, fwhm2, i, phi0 =  theta
     mu, sigma = 0.8609332208969597, 0.058531291109047125
     prior = (#empirical_prior(i, g) +
              np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a, phi_a_min, phi_a_max) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
              uninformative_prior(a, a_min, a_max) +
-             uninformative_prior(fwhm, fwhm_min, fwhm_max) +
+             uninformative_prior(fwhm1, fwhm_min, fwhm_max) +
+             uninformative_prior(fwhm2, fwhm_min, fwhm_max) +
              uninformative_prior(phi0, phi0_min, phi0_max))
 
     return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
@@ -140,9 +141,9 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     and above several hundred counts
     """
 
-    phi_a, theta_a, a, fwhm, i, phi0 = theta
+    phi_a, theta_a, a, fwhm1, fwhm2, i, phi0 = theta
 
-    model = full_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
+    model = full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=phi0,
                       phi=phi, num_pts=100, qlum=qlum,
                       Fth=Fth, R=R, median=median)
 
