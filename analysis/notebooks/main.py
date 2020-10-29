@@ -121,7 +121,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
 
-    samples = sampler.get_chain(discard=100000, flat=True, thin=50)
+    samples = sampler.get_chain(discard=500, flat=True, thin=50)
 
     if ndim==6:
 
@@ -205,6 +205,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
 
         rawsamples = pd.DataFrame(data=samples, columns=columns)
 
+
         for suffix in ["a","b"]:
             rawsamples1 = rawsamples[[f"t0_d_{suffix}",
                                     "latitude_deg",
@@ -271,8 +272,8 @@ if __name__ == "__main__":
 # Read ID from keyboard here
 
     ID = '452922110'#input("ID? ")
-    tstamp = '24_10_2020_18_50'#input("tstamp? ")
-    Nsteps = 100#input("Number of steps? ")
+    tstamp = '29_10_2020_07_59'#input("tstamp? ")
+    Nsteps = 10000#input("Number of steps? ")
     nflares = 1
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"

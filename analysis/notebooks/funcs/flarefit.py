@@ -1,4 +1,4 @@
-# Everything I need to fit the flare ligh curves to the model, 
+# Everything I need to fit the flare ligh curves to the model,
 # sampling from the posterior distribution using MCMC.
 
 from scipy import optimize
@@ -6,7 +6,7 @@ import numpy as np
 
 from .model import full_model, full_model_2flares
 
-# I do not test the prior, log likelihood, or log probability functions. 
+# I do not test the prior, log likelihood, or log probability functions.
 # I do test the underlying functions like gaussian_prior etc.
 
 def logit(function):
@@ -44,7 +44,7 @@ def uninformative_prior(rate, minrate, maxrate):
         return 0
 
 
-    
+
 
 def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
     '''Do some checks to make sure MCMC will work.'''
@@ -59,8 +59,8 @@ def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
 
 @logit
 def empirical_prior(x, g):
-    '''Evaluate an empirical prior 
-    
+    '''Evaluate an empirical prior
+
     Parameters:
     ------------
     x : N-array
@@ -94,8 +94,9 @@ def log_prior(theta, phi_a_min=0,
         time array to constrain start time
     """
     phi_a, theta_a, a, fwhm, i, phi0 =  theta
-
-    prior = (empirical_prior(i, g) +
+    mu, sigma = 0.8609332208969597, 0.058531291109047125
+    prior = (#empirical_prior(i, g) +
+             np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a, phi_a_min, phi_a_max) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
              uninformative_prior(a, a_min, a_max) +
@@ -114,18 +115,18 @@ def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kww, g=Non
     if not np.isfinite(lp):
         print("INF")
         return -np.inf
-    
+
     try:
         ll = log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median)
-        
+
     except:
         print("FAIL")
         return -np.inf
-    
+
     if np.isnan(ll):
         print("NAN")
         return -np.inf
-    
+
     return lp + ll
 
 # -------------------------------------------------------------------------------------------
@@ -135,7 +136,7 @@ def log_probability(theta, phi, flux, flux_err, qlum, Fth, R, median, kww, g=Non
 def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """Log likelihood function assuming
     Gaussian uncertainties in the data points.
-    SHOULDNT THIS BE POISSON? No, because flux_err is not exactly sqrt(n), 
+    SHOULDNT THIS BE POISSON? No, because flux_err is not exactly sqrt(n),
     and above several hundred counts
     """
 
@@ -144,10 +145,10 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     model = full_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
                       phi=phi, num_pts=100, qlum=qlum,
                       Fth=Fth, R=R, median=median)
-  
+
     fr2 = flux_err**2
     val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
- 
+
     return val
 
 
@@ -198,20 +199,20 @@ def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kw
 
     if not np.isfinite(lp):
         return -np.inf
-    
+
     try:
         ll = log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median)
-        
+
     except:
         return -np.inf
-    
+
     if np.isnan(ll):
         return -np.inf
-    
+
     return lp + ll
 
 
- 
+
 
 def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """Log likelihood function assuming
@@ -220,12 +221,12 @@ def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """
 
     phi_a1, phi_a2, theta_a, a1, a2, fwhm1, fwhm2, i, phi0 =  theta
-    model = full_model_2flares((phi_a1,phi_a2), theta_a, (a1,a2), (fwhm1,fwhm2), 
+    model = full_model_2flares((phi_a1,phi_a2), theta_a, (a1,a2), (fwhm1,fwhm2),
                                i, phi0=phi0,
                                 phi=phi, num_pts=100, qlum=qlum,
                                 Fth=Fth, R=R, median=median)
    # print(model)
-    
+
     fr2 = flux_err**2
     val = -0.5 * np.sum((flux - model) ** 2 / fr2 + np.log(fr2))
     return val
