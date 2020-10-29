@@ -7,8 +7,8 @@ from astropy.io import fits
 from astropy.constants import R_sun
 import astropy.units as u
 
-# from altaipony.flarelc import FlareLightCurve
-# from altaipony.lcio import from_path
+from altaipony.flarelc import FlareLightCurve
+from altaipony.lcio import from_path
 
 import sys, os
 
