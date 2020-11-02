@@ -16,6 +16,32 @@ import pandas as pd
 import numpy as np
 import os
 
+def get_multicolumntab(df, ID, columns, both, both_to, same, same_to, fill=" "*50):
+    dfn = {}
+    
+    for label, g in df.groupby(ID):
+        res =  np.array([fill] * len(columns))
+        if len(g)>1:
+            vals1 = g.iloc[0].values
+            vals2 = g.iloc[1].values
+            
+            res[both_to] = [item for sublist in list(zip(vals1[both], vals2[both])) for item in sublist]
+            res[same_to] = vals1[same]
+            dfn[label] = res
+        else:
+            vals1 = g.iloc[0].values
+
+            res[both_to] = [item for sublist in list(zip(vals1[both], [fill]*len(vals1))) for item in sublist]
+            res[same_to] = vals1[same]
+            dfn[label] = res
+
+    ddf = pd.DataFrame(dfn)
+    ddf.index = columns
+
+    return ddf
+
+
+
 def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
     """Convert table with percentiles 
     to latex compatible table.
@@ -121,7 +147,7 @@ if __name__ == "__main__":
     # Suffix should not resemble exoplanets
     mapsuffix = {"a":" (2-flare)", "b": " (2-flare)", "":"", np.nan:""}
     print(cp["ID"], cp.suffix)
-    cp["TIC"] = cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
+    cp["TIC"] = "TIC " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
 
 
     # convert Prot, vsini, Rstar, and later i
@@ -176,11 +202,25 @@ if __name__ == "__main__":
     # select columns
     df3 = df3[["TIC","SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
                "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f}$ (erg)",
-               r"$a$","FWHM$_i$ (min)","FWHM$_g$ (min)" ,"$\theta_f$ (deg)", ]]# r"$A/A_*$",
+               r"$a$","FWHM$_i$ (min)","FWHM$_g$ (min)" ,"$\theta_f$ (deg)", ]]
 
+    columns = ["SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
+               "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f,1}$ (erg)",
+               "$\log_{10} E_{f,2}$ (erg)",r"$a_1$",r"$a_2$",
+               "FWHM$_{i,1}$ (min)","FWHM$_{i,2}$ (min)",
+                "FWHM$_{g,1}$ (min)" ,"FWHM$_{g,2}$ (min)" ,
+                "$\theta_f$ (deg)", ]
+    #df3 = df3[columns]
+    same = [1,2,3,4,5,10]
+    same_to = [0,1,2,3,4,13]
+    both = [6,7,8,9]
+    both_to = [5,6,7,8,9,10,11,12]
+    
+    df3 = get_multicolumntab(df3, "TIC", columns, both, both_to,same, same_to)
+    df3 = df3.sort_values(by="SpT", axis=1)
    # nc = 'c' * (df3.shape[1]-2) #number of middle columns
-    df3 = df3.set_index("TIC")
-    df3 = df3.T
+   # df3 = df3.set_index("TIC")
+   # df3 = df3.T
     footnote_pref= "\multicolumn{" + str(df3.shape[1]-2) + "}{l}" 
     footnote_suf = "\n"
 
