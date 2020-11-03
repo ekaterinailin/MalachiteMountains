@@ -26,7 +26,7 @@ def get_inits_one(ID, tstamp):
 
     inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled.csv")
     print(inits, inits.ID, ID, inits.tstamp, tstamp)
-    target = inits.loc[(inits.ID == int(ID)) & (inits.tstamp==tstamp),:].iloc[0]
+    target = inits.loc[(inits.ID == ID) & (inits.tstamp==tstamp),:].iloc[0]
     ndim = int(target.nparam)
 
     assert ndim == log_probs[target.log_prob][0]
@@ -54,25 +54,15 @@ def get_inits_multi(ID, tstamp, nars=1):
 
     ndim, inits_a, phi, flux, flux_err, qlum, Fth, target, lc = get_inits_one(ID+"a", tstamp)
     ndim, inits_b, phi, flux, flux_err, qlum, Fth, target, lc = get_inits_one(ID+"b", tstamp)
+    print("INITS ", inits_a, inits_b)
 
-    inits_a.insert(1, inits_b[0])
-    inits_a.insert(4, inits_b[2])
-    inits_a.insert(6, inits_b[3])
+    inits = [inits_a[0], inits_b[0], inits_a[1], inits_a[2], inits_b[2],
+             inits_a[3], inits_b[3], inits_a[4], inits_b[4], inits_a[5],
+             inits_a[6]]
 
-
-    assert inits_b[1]==inits_a[2]
-    assert inits_b[3]==inits_a[6]
-    assert inits_b[5]==inits_a[8]
-    assert inits_b[0]==inits_a[1]
-    assert inits_b[4]==inits_a[7]
-
-    if nars == 2:
-        inits_a.insert(3, inits_b[1])
-        assert inits_a[-1]==inits_b[-1]
-        assert inits_a[7]==inits_b[3]
     print(target.ID, "ID")
 
-    return ndim, inits_a, phi, flux, flux_err, qlum, Fth, target, lc
+    return ndim, inits, phi, flux, flux_err, qlum, Fth, target, lc
 
 
 def get_inits(ID, tstamp, nflares, nars):
@@ -122,7 +112,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         multi_data_time = end - start
         print("Multiprocessing took {0:.1f} seconds".format(multi_data_time))
 
-    samples = sampler.get_chain(discard=1000, flat=True, thin=50)
+    samples = sampler.get_chain(discard=Nsteps//10, flat=True, thin=50)
 
     if ndim==7:
 
@@ -155,13 +145,14 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
                                 columns=columns)
 
         resultframe.to_csv(f"{CWD}/analysis/results/mcmc/"
-                        f"{target.ID}_{tstamp}_converted_mcmc_sample.csv",
+                        f"{tstamp}_{target.ID}_converted_mcmc_sample.csv",
                         index=False)
 
     elif ndim==11:
 
         columns = ["phase_peak_a", "phase_peak_b", "latitude_rad",
-                   "a_a", "a_b", "fwhm_periods_a", "fwhm_periods_b",
+                   "a_a", "a_b", "fwhm_periods_a1","fwhm_periods_a2",
+                   "fwhm_periods_b1","fwhm_periods_b2",
                    "i_rad","phase_0"]
 
         rawsamples = pd.DataFrame(data=samples, columns=columns)
@@ -170,21 +161,26 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
             rawsamples1 = rawsamples[[f"phase_peak_{suffix}",
                                     "latitude_rad",
                                     f"a_{suffix}",
-                                    f"fwhm_periods_{suffix}",
+                                    f"fwhm_periods_{suffix}1",
+                                      f"fwhm_periods_{suffix}2",
                                     "i_rad",
                                     "phase_0"]]
             rawsamples2 = rawsamples1.rename(index=str,
                                             columns=dict(zip([f"phase_peak_{suffix}",
                                                             f"a_{suffix}",
-                                                            f"fwhm_periods_{suffix}"],
+                                                            f"fwhm_periods_{suffix}1",
+                                                             f"fwhm_periods_{suffix}1"],
                                                             ["phase_peak",
                                                             "a",
-                                                            "fwhm_periods"])))
+                                                            "fwhm1_periods",
+                                                            "fwhm2_periods",])))
             rawsamples2.to_csv(f"{CWD}/analysis/results/mcmc/"
                             f"{tstamp}_{target.ID}{suffix}"
                             f"_raw_mcmc_sample.csv",
                             index=False)
 
+        # map phi0 to phi_peak longitude, still call it phi0
+        samples[:, -1] = (samples[:, 0]%(2.*np.pi) - samples[:, -1]) / np.pi * 180. # 0 would be facing the observer
 
         #map phi_a_distr to t0_distr:
         for i in [0,1]:
@@ -194,18 +190,17 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
         samples[:, 2] = samples[:, 2] / np.pi * 180.
 
         # convert FWHM to days
-        for i in [5,6]:
+        for i in [5,6,7,8]:
             samples[:, i] = samples[:, i]/2/np.pi * Prot_d
 
         # convert i to degrees
         samples[:, -2] = samples[:, -2] / np.pi * 180.
 
-        # map phi0 to phi_peak longitude, still call it phi0
-        samples[:, -1] = (samples[:, 0]%(2.*np.pi) - samples[:, -1]) / np.pi * 180. # 0 would be facing the observer
+
 
         columns = ["t0_d_a","t0_d_b","latitude_deg",
-                   "a_a","a_b","fwhm_d_a",
-                   "fwhm_d_b","i_deg","phase_deg"]
+                   "a_a","a_b","fwhm_d_a1","fwhm_d_a2",
+                   "fwhm_d_b1","fwhm_d_b2","i_deg","phase_deg"]
 
         rawsamples = pd.DataFrame(data=samples, columns=columns)
 
@@ -214,16 +209,19 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
             rawsamples1 = rawsamples[[f"t0_d_{suffix}",
                                     "latitude_deg",
                                     f"a_{suffix}",
-                                    f"fwhm_d_{suffix}",
+                                    f"fwhm_d_{suffix}1",
+                                      f"fwhm_d_{suffix}2",
                                     "i_deg",
                                     "phase_deg"]]
             rawsamples2 = rawsamples1.rename(index=str,
                                             columns=dict(zip([f"t0_d_{suffix}",
                                                             f"a_{suffix}",
-                                                            f"fwhm_d_{suffix}"],
+                                                            f"fwhm_d_{suffix}1",
+                                                             f"fwhm_d_{suffix}2"],
                                                             ["t0_d",
                                                             "a",
-                                                            "fwhm_d"])))
+                                                            "fwhm1_d",
+                                                            "fwhm2_d"])))
             rawsamples2.to_csv(f"{CWD}/analysis/results/mcmc/"
                             f"{tstamp}_{target.ID}{suffix}"
                             f"_converted_mcmc_sample.csv",
@@ -275,10 +273,10 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
 
-    ID = '452922110'#input("ID? ")
-    tstamp = '29_10_2020_10_58'#input("tstamp? ")
-    Nsteps = 10000#input("Number of steps? ")
-    nflares = 1
+    ID = '237880881'#input("ID? ")
+    tstamp = '30_10_2020_14_04'#input("tstamp? ")30_10_2020_11_30
+    Nsteps = 100000#input("Number of steps? ")
+    nflares = 2
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 

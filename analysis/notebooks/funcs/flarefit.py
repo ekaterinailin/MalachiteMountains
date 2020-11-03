@@ -94,9 +94,10 @@ def log_prior(theta, phi_a_min=0,
         time array to constrain start time
     """
     phi_a, theta_a, a, fwhm1, fwhm2, i, phi0 =  theta
-    mu, sigma = 0.8609332208969597, 0.058531291109047125
-    prior = (#empirical_prior(i, g) +
-             np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
+  #  mu, sigma = 0.8609332208969597, 0.058531291109047125 #452
+   # mu , sigma = 0.5776171360482742, 0.014770304325936782 #449
+    prior = (empirical_prior(i, g) +
+             #np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a, phi_a_min, phi_a_max) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
              uninformative_prior(a, a_min, a_max) +
@@ -159,8 +160,8 @@ def log_likelihood(theta, phi, flux, flux_err, qlum, Fth, R, median ):
 def log_prior_2flares(theta, phi_a_min=(0,0),
               phi_a_max=(1e9,1e9), theta_a_min=-np.pi/2.,
               theta_a_max=np.pi/2., a_min=(0,0), a_max=(1e9,1e9),
-              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=-np.pi,
-              phi0_max=np.pi, g=None):
+              fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=-2*np.pi,
+              phi0_max=2*np.pi, g=None):
     """Uniform prior for start time,
     amplitude, and duration.
 
@@ -177,16 +178,21 @@ def log_prior_2flares(theta, phi_a_min=(0,0),
     x : array
         time array to constrain start time
     """
-    phi_a1, phi_a2, theta_a, a1, a2, fwhm1, fwhm2, i, phi0 =  theta
+   # print(theta)
+    phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12,fwhm21, fwhm22, i, phi0 =  theta
+   # mu , sigma = 0.5776171360482742, 0.014770304325936782 #449
 
-    prior = (empirical_prior(i, g) + +
+    prior = (empirical_prior(i, g) +
+             #np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a1, phi_a_min[0], phi_a_max[0]) +
              uninformative_prior(phi_a2, phi_a_min[1], phi_a_max[1]) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
              uninformative_prior(a1, a_min[0], a_max[0]) +
-             uninformative_prior(fwhm1, fwhm_min[0], fwhm_max[0]) +
+             uninformative_prior(fwhm11, fwhm_min[0], fwhm_max[0]) +
+             uninformative_prior(fwhm12, fwhm_min[0], fwhm_max[0]) +
              uninformative_prior(a2, a_min[1], a_max[1]) +
-             uninformative_prior(fwhm2, fwhm_min[1], fwhm_max[1]) +
+             uninformative_prior(fwhm21, fwhm_min[1], fwhm_max[1]) +
+             uninformative_prior(fwhm22, fwhm_min[1], fwhm_max[1]) +
              uninformative_prior(phi0, phi0_min, phi0_max))
 
     return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
@@ -199,15 +205,18 @@ def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kw
     lp = log_prior_2flares(theta, g=g, **kww)
 
     if not np.isfinite(lp):
+        print("no prior")
         return -np.inf
 
     try:
         ll = log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median)
 
     except:
+        print("no loglike")
         return -np.inf
 
     if np.isnan(ll):
+        print("nan loglike")
         return -np.inf
 
     return lp + ll
@@ -218,12 +227,12 @@ def log_probability_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median, kw
 def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """Log likelihood function assuming
     Gaussian uncertainties in the data points.
-    SHOULDNT THIS BE POISSON?
+
     """
 
-    phi_a1, phi_a2, theta_a, a1, a2, fwhm1, fwhm2, i, phi0 =  theta
-    model = full_model_2flares((phi_a1,phi_a2), theta_a, (a1,a2), (fwhm1,fwhm2),
-                               i, phi0=phi0,
+    phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12, fwhm21, fwhm22, i, phi0 =  theta
+    model = full_model_2flares((phi_a1,phi_a2), theta_a, (a1,a2), (fwhm11,fwhm12),
+                               (fwhm21,fwhm22), i, phi0=phi0,
                                 phi=phi, num_pts=100, qlum=qlum,
                                 Fth=Fth, R=R, median=median)
    # print(model)

@@ -85,7 +85,7 @@ def full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
 
     return m + median
 
-def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+def full_model_2flares(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
     """Full model in the case of two flares that
@@ -99,8 +99,10 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
         latitude of the flaring region in rad
     a : tuple of float >0
         relative amplitude of the flare
-    fwhm : tuple of float >0
-        FWHM of the flare in fractions of 2pi
+    fwhm1 : tuple of float >0
+        rise FWHM of the flare in fractions of 2pi
+    fwhm2 : tuple of float >0
+        decay FWHM of the flare in fractions of 2pi
     i : float
         inclination in rad
     phi0 : float (0,2pi)
@@ -124,11 +126,11 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
     array of floats -  model light curve
     """
     ms = []
-    for _phi_a, _a, _fwhm in zip(phi_a,a,fwhm):
+    for _phi_a, _a, _fwhm1, _fwhm2 in zip(phi_a, a, fwhm1, fwhm2):
 
         radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
 
-        flare = aflare(phi, _phi_a, _fwhm, _a*median,)
+        flare = aflare_decoupled(phi, _phi_a, (_fwhm1, _fwhm2), _a*median,)
 
         if radius<10: #deg
             latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
