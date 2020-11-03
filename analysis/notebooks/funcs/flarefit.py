@@ -94,10 +94,7 @@ def log_prior(theta, phi_a_min=0,
         time array to constrain start time
     """
     phi_a, theta_a, a, fwhm1, fwhm2, i, phi0 =  theta
-  #  mu, sigma = 0.8609332208969597, 0.058531291109047125 #452
-   # mu , sigma = 0.5776171360482742, 0.014770304325936782 #449
     prior = (empirical_prior(i, g) +
-             #np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a, phi_a_min, phi_a_max) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
              uninformative_prior(a, a_min, a_max) +
@@ -178,12 +175,10 @@ def log_prior_2flares(theta, phi_a_min=(0,0),
     x : array
         time array to constrain start time
     """
-   # print(theta)
-    phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12,fwhm21, fwhm22, i, phi0 =  theta
-   # mu , sigma = 0.5776171360482742, 0.014770304325936782 #449
+    phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12, fwhm21, fwhm22, i, phi0 =  theta
+  
 
     prior = (empirical_prior(i, g) +
-             #np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2 +
              uninformative_prior(phi_a1, phi_a_min[0], phi_a_max[0]) +
              uninformative_prior(phi_a2, phi_a_min[1], phi_a_max[1]) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +
@@ -231,8 +226,8 @@ def log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median ):
     """
 
     phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12, fwhm21, fwhm22, i, phi0 =  theta
-    model = full_model_2flares((phi_a1,phi_a2), theta_a, (a1,a2), (fwhm11,fwhm12),
-                               (fwhm21,fwhm22), i, phi0=phi0,
+    model = full_model_2flares((phi_a1, phi_a2), theta_a, (a1, a2), (fwhm11, fwhm21),
+                               (fwhm12,fwhm22), i, phi0=phi0,
                                 phi=phi, num_pts=100, qlum=qlum,
                                 Fth=Fth, R=R, median=median)
    # print(model)
