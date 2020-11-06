@@ -97,7 +97,7 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
 if __name__ == "__main__":
     # Get results table that you want to convert:
     CWD = "/".join(os.getcwd().split("/")[:-2])
-    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/mcmcoutput.csv").iloc[:7]
+    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/06_11_2020deprecated_mcmcoutput.csv").iloc[:7]
     df = df.drop_duplicates(keep=False).fillna("")
     
     # Get properties, and add them to the table
@@ -129,7 +129,7 @@ if __name__ == "__main__":
               ("frac_area","$A/A_*$"),
              # ("rad_rsun", "$\omega/2$ (deg)"),
               ("phase_deg","$\phi_0$ (deg)"),
-              ("a","$a$"),
+              ("a","$A$"),
               ("i_deg","$i$ (deg)"),
               ("fwhm1_d", "FWHM$_i$ (min)"),
 	       ("fwhm2_d", "FWHM$_g$ (min)"),
@@ -145,7 +145,7 @@ if __name__ == "__main__":
    
     # Merge ID and suffix
     # Suffix should not resemble exoplanets
-    mapsuffix = {"a":" (2-flare)", "b": " (2-flare)", "":"", np.nan:""}
+    mapsuffix = {"a":" (2-flare)", "b": " (2-flare)", "c": " (h. u.)","":"", np.nan:""}
     print(cp["ID"], cp.suffix)
     cp["TIC"] = "TIC " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
 
@@ -202,19 +202,18 @@ if __name__ == "__main__":
     # select columns
     df3 = df3[["TIC","SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
                "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f}$ (erg)",
-               r"$a$","FWHM$_i$ (min)","FWHM$_g$ (min)" ,"$\theta_f$ (deg)", ]]
+               r"$A$","FWHM$_i$ (min)","FWHM$_g$ (min)" ,"$\theta_f$ (deg)", ]]
 
     columns = ["SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
-               "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f,1}$ (erg)",
-               "$\log_{10} E_{f,2}$ (erg)",r"$a_1$",r"$a_2$",
-               "FWHM$_{i,1}$ (min)","FWHM$_{i,2}$ (min)",
-                "FWHM$_{g,1}$ (min)" ,"FWHM$_{g,2}$ (min)" ,
+               "$R_*/R_\odot$", r"$i$ (deg)",
+               "$\log_{10} E_{f,1}$ (erg)",r"$A_1$", "FWHM$_{i,1}$ (min)","FWHM$_{g,1}$ (min)" ,
+               "$\log_{10} E_{f,2}$ (erg)",r"$A_2$", "FWHM$_{i,2}$ (min)","FWHM$_{g,2}$ (min)" ,
                 "$\theta_f$ (deg)", ]
     #df3 = df3[columns]
     same = [1,2,3,4,5,10]
     same_to = [0,1,2,3,4,13]
     both = [6,7,8,9]
-    both_to = [5,6,7,8,9,10,11,12]
+    both_to = [5,9,6,10,7,11,8,12]
     
     df3 = get_multicolumntab(df3, "TIC", columns, both, both_to,same, same_to)
     df3 = df3.sort_values(by="SpT", axis=1)
@@ -236,5 +235,5 @@ if __name__ == "__main__":
     PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft/nature/multiperiodflaresnature/tables"
 
     # Write out latex string
-    with open(f"{PWD}/nature_results_decoupled.tex", "w") as f:
+    with open(f"{PWD}/nature_results_decoupled_deprecated.tex", "w") as f:
         f.write(stri)
