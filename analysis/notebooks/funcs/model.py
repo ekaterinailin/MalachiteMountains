@@ -52,7 +52,7 @@ def full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
     i : float
         inclination in rad
     phi0 : float (0,2pi)
-        longitude that is facing the observer a t=0
+        longitude that is facing the observer at t=0
     phi : array of floats >0
         longitudes
     num_pts : int
