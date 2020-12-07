@@ -3,3 +3,9 @@
 *_pycache_*
 ../plots/*
 analysis/plots/**
+*.png
+*_raw_*.csv
+*_converted_*.csv
+analysis/results/flarefind
+**/archive/
+papers/
