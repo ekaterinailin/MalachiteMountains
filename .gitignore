@@ -9,3 +9,4 @@ analysis/plots/**
 analysis/results/flarefind
 **/archive/
 papers/
+zz_*.ipynb
