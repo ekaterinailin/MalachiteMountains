@@ -10,3 +10,7 @@ analysis/results/flarefind
 **/archive/
 papers/
 zz_*.ipynb
+analysis/results/mcmc/Gizis_KIC100_Gaia_Update/
+.joblib/
+
+
