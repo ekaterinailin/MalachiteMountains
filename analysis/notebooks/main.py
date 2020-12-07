@@ -83,9 +83,9 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-3):
     pos = inits * (1. + wiggle * np.random.randn(nwalkers, ndim))
 
     # Get Prot_d
-    props = pd.read_csv(f"{CWD}/data/summary/lcsi.csv")
+    props = pd.read_csv(f"{CWD}/data/summary/inclination_input.csv")
 
-    Prot_d = props[props.ID == int(ID)].iloc[0].Prot_d
+    Prot_d = props[props["id"] == int(ID)].iloc[0].prot_d
     print(Prot_d)
 
     # Set up the backend
@@ -273,10 +273,10 @@ def continue_mcmc(ID, tstamp, nflares, nars, Nsteps=50000):
 if __name__ == "__main__":
 # Read ID from keyboard here
 
-    ID = '237880881'#input("ID? ")
-    tstamp = '30_10_2020_14_04'#input("tstamp? ")30_10_2020_11_30
-    Nsteps = 100000#input("Number of steps? ")
-    nflares = 2
+    ID = '44984200'#input("ID? ")
+    tstamp = '06_11_2020_15_47'#input("tstamp? ")30_10_2020_11_30
+    Nsteps =10000#input("Number of steps? ")
+    nflares = 1
     nars = 1
     filename = f"{CWD}/analysis/results/mcmc/{tstamp}_{ID}_MCMC.h5"
 

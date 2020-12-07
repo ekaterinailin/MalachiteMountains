@@ -176,9 +176,10 @@ def log_prior_2flares(theta, phi_a_min=(0,0),
         time array to constrain start time
     """
     phi_a1, phi_a2, theta_a, a1, a2, fwhm11, fwhm12, fwhm21, fwhm22, i, phi0 =  theta
-  
 
-    prior = (empirical_prior(i, g) +
+    mu, sigma =  0.382401784301274, 0.06664487587456314
+    prior = (#empirical_prior(i, g) +
+             np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(i-mu)**2/sigma**2+
              uninformative_prior(phi_a1, phi_a_min[0], phi_a_max[0]) +
              uninformative_prior(phi_a2, phi_a_min[1], phi_a_max[1]) +
              uninformative_prior(theta_a, theta_a_min, theta_a_max) +

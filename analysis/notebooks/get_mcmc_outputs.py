@@ -9,13 +9,13 @@ Ekaterina Ilin, 2020, MIT License
 
 
 This script takes the converted_mcmc_sample.csv
-files from the MCMC fitting, add radius of AR 
+files from the MCMC fitting, add radius of AR
 (in degrees and as fraction of stellar surface),
 flare ED, flare energy, and write out a new table
 with percentiles for each posterior distribution.
 
 If AR, flare ED, and flare energy were not in the
-read file, add them and save the result to save 
+read file, add them and save the result to save
 computation time.
 """
 
@@ -29,9 +29,9 @@ from astropy.constants import R_sun
 
 from funcs.model import calculate_angular_radius, calculate_ED
 
-import matplotlib 
-matplotlib.rc('xtick', labelsize=14) 
-matplotlib.rc('ytick', labelsize=14) 
+import matplotlib
+matplotlib.rc('xtick', labelsize=14)
+matplotlib.rc('ytick', labelsize=14)
 
 font = {'family' : 'courier',
         'weight' : 'normal',
@@ -73,7 +73,7 @@ def write_mcmc_output(resultframe, tstamp, ID, suffix, CWD, metatstamp):
     with open(f"{CWD}/analysis/results/mcmc/mcmcoutput.csv","a") as f:
         #Add more lines here
         pd.DataFrame(series).T.to_csv(f, index=False)
-        
+
     with open(f"{CWD}/analysis/results/mcmc/{metatstamp}_mcmcoutput.csv","a") as f:
         #Add more lines here
         pd.DataFrame(series).T.to_csv(f, index=False)
@@ -86,14 +86,14 @@ def write_meta_mcmc(CWD, tstamp, ID, burnin, steps, walkers, ndim):
         firstout += "\n"
         f.write(firstout)
         f.write(out)
-        
-        
+
+
 def get_rad_r_and_plot(ID, resultframe, Fth, qlum, R, CWD, tstamp):
     if "rad_rsun" not in resultframe.columns:
         g = lambda x: calculate_angular_radius(Fth, x.a, qlum, R)
         resultframe["rad_rsun"] = resultframe.apply(g, axis=1)
 
-    plt.hist(resultframe.rad_rsun.values, bins=100, 
+    plt.hist(resultframe.rad_rsun.values, bins=100,
              histtype="step", color="k", linewidth=2);
     plt.xlabel("angular radius [deg]")
     plt.savefig(f"{CWD}/analysis/plots/mcmc/"
@@ -111,30 +111,30 @@ def get_frac_area(ID, resultframe, Fth, qlum, R, CWD, tstamp):
 
 
 def get_ED_and_plot(ID, resultframe, lc, CWD, tstamp, suffix):
-    
+
     if "ED_s" not in resultframe.columns:
         g = lambda x: calculate_ED(lc.t.values, x.t0_d, x.fwhm1_d,x.fwhm2_d, x.a)
         resultframe["ED_s"] = resultframe.apply(g, axis=1)
 
-    plt.hist(resultframe.ED_s.values, bins=200, 
+    plt.hist(resultframe.ED_s.values, bins=200,
          histtype="step", color="k", linewidth=2);
     plt.xlabel("ED [s]")
     plt.savefig(f"{CWD}/analysis/plots/mcmc/"
                 f"{tstamp}_{ID}{suffix}_flare_ED.png",
                 dpi=300)
     return resultframe
-    
+
 
 def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp, suffix):
-    
+
     if "ED_s" not in resultframe.columns:
         get_ED_and_plot(resultframe, lc, CWD)
-        
+
     if "Eflare_erg" not in resultframe.columns:
         g = lambda x: x.ED_s * qlum.value
         resultframe["Eflare_erg"] = resultframe.apply(g, axis=1)
-   
-    hist, bins, p = plt.hist(resultframe.Eflare_erg.values, bins=200, 
+
+    hist, bins, p = plt.hist(resultframe.Eflare_erg.values, bins=200,
          histtype="step", color="k", linewidth=2);
 
     plt.xlabel(r"$E_f$ [erg]")
@@ -143,14 +143,14 @@ def get_E_and_plot(ID, resultframe, lc, qlum, CWD, tstamp, suffix):
                 dpi=300)
     return resultframe
 
-f
+
 
 if __name__ == "__main__":
-    
+
     # time stamp for backup
     metatstamp = time.strftime("%d_%m_%Y", time.localtime())
 
-    # Datasets we analysed 
+    # Datasets we analysed
     datasets = [(44984200, "a", "02_11_2020_11_17"),
                 (44984200, "b", "02_11_2020_11_17"),
                   #(237880881, "a", "03_10_2020_11_29"),
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
         # Get radius of AR distribution and plot a histogram
         resultframe = get_rad_r_and_plot(ID, resultframe, Fth, qlum, R, CWD, tstamp)
-        
+
         # Convert radius to fraction of stellar surface
         get_frac_area(ID, resultframe, Fth, qlum, R, CWD, tstamp)
 
