@@ -48,6 +48,7 @@ import time
 style = {'277539431' : ["b","solid"],
          '100004076' : ["orange","solid"],
          '44984200' : ["r","solid"],
+         '44984200c' : ["r","solid"],
          '44984200a' : ["r","dashed"],
          '44984200b' : ["r","dashed"],
          '237880881a' : ["grey","dotted"],
@@ -148,7 +149,7 @@ if __name__ == "__main__":
 
     # time stamp for backup
     metatstamp = time.strftime("%d_%m_%Y", time.localtime())
-    metatstamp += "deprecated"
+    metatstamp += "_GP_deprecated"
     # Datasets we analysed
     datasets = [
 	#	main paper
@@ -161,22 +162,40 @@ if __name__ == "__main__":
 
         #       supp mat
 
-                 (452922110, "", "29_10_2020_10_58"),
-                 (44984200, "", "30_10_2020_07_13"),
-                 (44984200, "c", "06_11_2020_15_47"),
-                 (237880881,"a","30_10_2020_14_04"),
-                 (237880881,"b","30_10_2020_14_04"),
-                 (44984200, "a", "30_10_2020_07_14"),
-                 (44984200, "b", "30_10_2020_07_14"),
+#                  (452922110, "", "29_10_2020_10_58"),
+#                  (44984200, "", "30_10_2020_07_13"),
+#                  (44984200, "c", "06_11_2020_15_47"),
+#                  (237880881,"a","30_10_2020_14_04"),
+#                  (237880881,"b","30_10_2020_14_04"),
+#                  (44984200, "a", "30_10_2020_07_14"),
+#                  (44984200, "b", "30_10_2020_07_14"),
+        
+        
+        # new version main paper
+#                 (452922110, "", "10_12_2020_07_05"),
+#                 (277539431, "", "07_12_2020_15_26"),
+#                 (237880881,"a","10_12_2020_07_11"),
+#                 (237880881,"b","10_12_2020_07_11"),
+#                 (44984200, "a", "10_12_2020_07_10"),
+#                 (44984200, "b", "10_12_2020_07_10"),
+        
+        # new version suppmat
+                (452922110, "", "07_12_2020_15_44"),
+                (237880881,"a","07_12_2020_07_47"),
+                (237880881,"b","07_12_2020_07_47"),
+                (44984200, "a", "07_12_2020_19_42"),
+                (44984200, "b", "07_12_2020_19_42"),
+                (44984200, "", "07_12_2020_18_46"),
+                (44984200, "c", "10_12_2020_07_12"),
                     ]
 
-    for dataset in range(7):
+    for dataset in [-1]:
         # What dataset do you want to analyse?
         ID, suffix, tstamp = datasets[dataset]
 
         # Pick up the input parameters
         CWD = "/".join(os.getcwd().split("/")[:-2])
-        inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled.csv")
+        inits = pd.read_csv(f"{CWD}/data/summary/inits_decoupled_GP.csv")
         inits = inits[(inits.ID.astype(str) == str(ID)+suffix) &
                       (inits.tstamp==tstamp)].iloc[0]
 

@@ -97,7 +97,7 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
 if __name__ == "__main__":
     # Get results table that you want to convert:
     CWD = "/".join(os.getcwd().split("/")[:-2])
-    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/06_11_2020deprecated_mcmcoutput.csv").iloc[:7]
+    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/15_12_2020_GP_deprecated_mcmcoutput.csv")
     df = df.drop_duplicates(keep=False).fillna("")
     
     # Get properties, and add them to the table
@@ -156,17 +156,17 @@ if __name__ == "__main__":
 
     # write vsini with uncertainties to str
     cp[r"$v \sin i$ (km s$^{-1}$)"] = cp.apply(lambda x: 
-                                          fr"${x.vsini_kms:.1f}$\pm${x.e_vsini_kms :.1f}$",
+                                          fr"${x.vsini_kms:.1f} \pm {x.e_vsini_kms :.1f}$",
                                           axis=1)
     
     # write Rstart with uncertainties to str
     cp[r"$R_*/R_\odot$"] = cp.apply(lambda x: 
-                                          fr"${x.rad_rsun:.3f}$\pm${x.e_rad_rsun:.3f}$",
+                                          fr"${x.rad_rsun:.3f} \pm {x.e_rad_rsun:.3f}$",
                                           axis=1)
 
     # write rotation period to string
     cp[r"$P$ (min)"] = cp.apply(lambda x:
-                                       fr"{x.prot_d * 24. *60.:.3f}$\pm${x.e_prot_d * 24. *60.:.3f}", axis=1)
+                                       fr"{x.prot_d * 24. *60.:.3f} \pm {x.e_prot_d * 24. *60.:.3f}", axis=1)
     
     #write inclination
   #  cp[r"$i$ (deg)"] = cp.apply(lambda x: f"${x.inclination:.1f}\left(^{x.inclination_uperr:.1f}_{abs(x.inclination_lowerr):.1f}\right)$", axis=1)
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # rename spt to SpT
     cp = cp.rename(index=str, columns={"spt":"SpT"})
     
-    
+
     
     # Remove helper columns
     del cp['tstamp']
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 
     # Convert pandas to latex string
     df3 = cp.copy()
-    
+
     # select columns
     df3 = df3[["TIC","SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
                "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f}$ (erg)",
@@ -235,5 +235,5 @@ if __name__ == "__main__":
     PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft/nature/multiperiodflaresnature/tables"
 
     # Write out latex string
-    with open(f"{PWD}/nature_results_decoupled_deprecated.tex", "w") as f:
+    with open(f"{PWD}/nature_results_decoupled_GP_deprecated.tex", "w") as f:
         f.write(stri)
