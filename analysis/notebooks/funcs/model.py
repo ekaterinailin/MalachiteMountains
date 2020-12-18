@@ -23,7 +23,7 @@ for key, val in response_curve.items():
     rwav = (df.nm * 10).values * u.angstrom #convert to angstroms
     rres = (df.response).values
     response_curve[key] = (rwav,rres)
-    
+
 #----------------------------------------------------------------------
 
 # Create a spherical grid only once for the entire analysis ------------
@@ -32,7 +32,7 @@ PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
 
 #----------------------------------------------------------------------
 
-def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
+def full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
     """Full model.
@@ -45,7 +45,61 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
         latitude of the flaring region in rad
     a : float >0
         relative amplitude of the flare
-    fwhm : float >0
+    fwhm1 : float >0
+        rise FWHM of the flare in fractions of 2pi
+    fwhm2 : float >0
+        decay FWHM of the flare in fractions of 2pi
+    i : float
+        inclination in rad
+    phi0 : float (0,2pi)
+        longitude that is facing the observer at t=0
+    phi : array of floats >0
+        longitudes
+    num_pts : int
+        number of grid points
+    qlum : astropy Quantity
+        quiescent luminosity in defined band in erg/s
+    Fth : astropy Quantity
+        specific flux of the flare at a given temperature
+        and in a defined band in erg/s/cm^2
+    R : astropy Quantity
+        stellar radius
+    median : float
+        quiescent flux of the light curve
+
+    Return:
+    -------
+    array of floats -  model light curve
+    """
+
+    radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
+
+    flare = aflare_decoupled(phi, phi_a, (fwhm1, fwhm2), a*median,)
+
+    if radius<10: #deg
+        latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
+    else:
+        latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
+
+    lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+
+    return m + median
+
+
+def full_model_coupled(phi_a, theta_a, a, fwhm, i, phi0=0,
+              phi=None, num_pts=100, qlum=None,
+              Fth=None, R=None, median=0):
+    """Full model.
+
+    Parameters:
+    ------------
+    phi_a : float (0,2pi) + N*2pi
+        longitude of the flare peak in rad
+    theta_a : float (0, pi/2)
+        latitude of the flaring region in rad
+    a : float >0
+        relative amplitude of the flare
+    fwhm: float >0
         FWHM of the flare in fractions of 2pi
     i : float
         inclination in rad
@@ -69,21 +123,23 @@ def full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
     -------
     array of floats -  model light curve
     """
-    
+
     radius = calculate_angular_radius(Fth, a, qlum, R)# the amplitude is the real one observed from the front
 
     flare = aflare(phi, phi_a, fwhm, a*median,)
 
     if radius<10: #deg
         latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
-    else: 
+    else:
         latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
 
     lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
-    
+
     return m + median
 
-def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
+
+
+def full_model_2flares(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
               Fth=None, R=None, median=0):
     """Full model in the case of two flares that
@@ -97,8 +153,10 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
         latitude of the flaring region in rad
     a : tuple of float >0
         relative amplitude of the flare
-    fwhm : tuple of float >0
-        FWHM of the flare in fractions of 2pi
+    fwhm1 : tuple of float >0
+        rise FWHM of the flare in fractions of 2pi
+    fwhm2 : tuple of float >0
+        decay FWHM of the flare in fractions of 2pi
     i : float
         inclination in rad
     phi0 : float (0,2pi)
@@ -122,79 +180,23 @@ def full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
     array of floats -  model light curve
     """
     ms = []
-    for _phi_a, _a, _fwhm in zip(phi_a,a,fwhm):
-        
+    for _phi_a, _a, _fwhm1, _fwhm2 in zip(phi_a, a, fwhm1, fwhm2):
+
         radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
-        
-        flare = aflare(phi, _phi_a, _fwhm, _a*median,)
-        
+
+        flare = aflare_decoupled(phi, _phi_a, (_fwhm1, _fwhm2), _a*median,)
+
         if radius<10: #deg
             latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
-        else: 
+        else:
             latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
         lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
         ms.append(m)
 
-    m = ms[0]+ms[1]    
+    m = ms[0]+ms[1]
     return m + median
 
 
-def full_model_2flares2ars(phi_a, theta_a, a, fwhm, i, phi0=0,
-              phi=None, num_pts=100, qlum=None,
-              Fth=None, R=None, median=0):
-    """Full model in the case of two flares that
-    originate from two different active regions.
-
-    Parameters:
-    ------------
-    phi_a : tuple of float (0,2pi)
-        longitude of the flare peak in rad
-    theta_a : float (0, pi/2)
-        latitude of the flaring region in rad
-    a : tuple of float >0
-        relative amplitude of the flare
-    fwhm : tuple of float >0
-        FWHM of the flare in fractions of 2pi
-    i : float
-        inclination in rad
-    phi0 : float (0,2pi)
-        longitude that is facing the observer a t=0
-    phi : array of floats >0
-        longitudes
-    num_pts : int
-        number of grid points
-    qlum : astropy Quantity
-        quiescent luminosity in defined band in erg/s
-    Fth : astropy Quantity
-        specific flux of the flare at a given temperature
-        and in a defined band in erg/s/cm^2
-    R : astropy Quantity
-        stellar radius
-    median : float
-        quiescent flux of the light curve
-
-    Return:
-    -------
-    array of floats -  model light curve
-    """
-    ms = []
-    for _phi_a, _a, _fwhm, _theta_a in zip(phi_a, a, fwhm, theta_a):
-        #Fth, a, qlum, R, lon, lat, i, phi0=0 __  phi_a, theta_a, i, phi0=phi0
-        radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
-        #print(radius, "Radius")
-        flare = aflare(phi, _phi_a, _fwhm, _a*median,)
-        #  plt.plot(phi, flare)
-        if radius<10: #deg
-            latitudes, longitudes, pos = dot_ensemble_circular(_theta_a, 0, radius, num_pts=num_pts)
-        else: 
-            latitudes, longitudes = dot_ensemble_spherical(_theta_a, 0, radius)
-        lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
-        ms.append(m)
-    #plt.plot(phi, m)
-    # print(lamb, np.max(lamb), np.min(lamb))
-    #print(lamb, onoff)
-    m = ms[0] + ms[1]    
-    return m + median
 
 def lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     """Take a flare light curve and a rotating ensemble of latitudes
@@ -230,11 +232,11 @@ def lightcurve_model(phi, latitudes, longitudes, flare, inclination, phi0=0.):
     assert l == len(longitudes)
     assert len(phi) == len(flare)
     # -----------------------------------------------
-    
+
     # Mould phi0 into -pi:pi range
 
     phi0 = phi0 % (2*np.pi)
- 
+
 
     # Get daylengths for all grid points
     # and calculate day/night switches:
@@ -618,16 +620,16 @@ def calculate_angular_radius(Fth, a, qlum, R):
         projected quiescent luminosity in erg/s
     R : float > 0
         stellar radius in solar radii
-   
+
     Return:
     -------
     float - radius of flaring area in deg
     """
     sin = np.sqrt((a * qlum) / (np.pi * R**2 * Fth))
-   
+
     if sin > 1:
         raise ValueError("Flare area seems larger than stellar hemisphere.")
-    
+
     return np.arcsin(sin).to("deg").value
 
 
@@ -704,12 +706,82 @@ def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
 
     return flare
 
+def aflare_decoupled(t, tpeak, dur, ampl, upsample=False, uptime=10):
+    '''
+    The Analytic Flare Model evaluated for a single-peak (classical).
+    Reference Davenport et al. (2014) http://arxiv.org/abs/1411.3723
+    Use this function for fitting classical flares with most curve_fit
+    tools.
+    Note: this model assumes the flux before the flare is zero centered
+    Parameters
+    ----------
+    t : 1-d array
+        The time array to evaluate the flare over
+    tpeak : float
+        The time of the flare peak
+    dur : float, float
+        Rise and decay fwhm of the flare
+    ampl : float
+        The amplitude of the flare
+    upsample : bool
+        If True up-sample the model flare to ensure more precise energies.
+    uptime : float
+        How many times to up-sample the data (Default is 10)
+    Returns
+    -------
+    flare : 1-d array
+        The flux of the flare model evaluated at each time
+    '''
+    _fr = [1.00000, 1.94053, -0.175084, -2.24588, -1.12498]
+    _fd = [0.689008, -1.60053, 0.302963, -0.278318]
 
+    fwhm1, fwhm2 = dur # crude approximation for a triangle shape would be dur/2.
 
-def calculate_ED(t, t0, dur, ampl):
+    if upsample:
+        dt = np.nanmedian(np.diff(t))
+        timeup = np.linspace(min(t)-dt, max(t)+dt, t.size * uptime)
+
+        flareup = np.piecewise(timeup, [(timeup<= tpeak) * (timeup-tpeak)/fwhm1 > -1.,
+                                        (timeup > tpeak)],
+                                    [lambda x: (_fr[0]+                       # 0th order
+                                                _fr[1]*((x-tpeak)/fwhm1)+      # 1st order
+                                                _fr[2]*((x-tpeak)/fwhm1)**2.+  # 2nd order
+                                                _fr[3]*((x-tpeak)/fwhm1)**3.+  # 3rd order
+                                                _fr[4]*((x-tpeak)/fwhm1)**4. ),# 4th order
+                                     lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm1)*_fd[1] ) +
+                                                _fd[2]*np.exp( ((x-tpeak)/fwhm2)*_fd[3] ))]
+                                    ) * np.abs(ampl) # amplitude
+
+        # and now downsample back to the original time...
+        ## this way might be better, but makes assumption of uniform time bins
+        # flare = np.nanmean(flareup.reshape(-1, uptime), axis=1)
+
+        ## This way does linear interp. back to any input time grid
+        # flare = np.interp(t, timeup, flareup)
+
+        ## this was uses "binned statistic"
+        downbins = np.concatenate((t-dt/2.,[max(t)+dt/2.]))
+        flare,_,_ = binned_statistic(timeup, flareup, statistic='mean',
+                                     bins=downbins)
+
+    else:
+        flare = np.piecewise(t, [(t<= tpeak) * (t-tpeak)/fwhm1 > -1.,
+                                 (t > tpeak)],
+                                [lambda x: (_fr[0]+                       # 0th order
+                                            _fr[1]*((x-tpeak)/fwhm1)+      # 1st order
+                                            _fr[2]*((x-tpeak)/fwhm1)**2.+  # 2nd order
+                                            _fr[3]*((x-tpeak)/fwhm1)**3.+  # 3rd order
+                                            _fr[4]*((x-tpeak)/fwhm1)**4. ),# 4th order
+                                 lambda x: (_fd[0]*np.exp( ((x-tpeak)/fwhm1)*_fd[1] ) +
+                                            _fd[2]*np.exp( ((x-tpeak)/fwhm2)*_fd[3] ))]
+                                ) * np.abs(ampl) # amplitude
+
+    return flare
+
+def calculate_ED(t, t0, fwhm1, fwhm2, ampl):
     """Calculate equiavlent duration
     of model flare.
-    
+
     Parameters:
     -----------
     t : numpy.array
@@ -720,11 +792,11 @@ def calculate_ED(t, t0, dur, ampl):
         flare FWHM
     ampl : float
         relative flare amplitude
-        
+
     Return:
     --------
     ED in seconds - float
     """
-    if no_nan_inf([t0, dur, ampl]) == False:
+    if no_nan_inf([t0, fwhm1, fwhm2, ampl]) == False:
         raise ValueError("flaret is NaN or Inf.")
-    return np.sum(np.diff(t) * aflare(t, t0, dur, ampl)[:-1]) * 60.0 * 60.0 * 24.0
+    return np.sum(np.diff(t) * aflare_decoupled(t, t0, (fwhm1,fwhm2), ampl)[:-1]) * 60.0 * 60.0 * 24.0

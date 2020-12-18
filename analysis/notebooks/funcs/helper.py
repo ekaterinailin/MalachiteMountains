@@ -12,7 +12,7 @@ from altaipony.lcio import from_path
 
 import sys, os
 
-#CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
+CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
 CWD = "/home/ekaterina/Documents/001_science/MalachiteMountains/data/lcs"
 
 # We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
@@ -63,7 +63,7 @@ def fetch_lightcurve(target, flux_type="FLUX", path=CWD):
 def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
                             sector=None, TIC=None, flux_type="PDCSAP_FLUX"):
     '''Read in custom aperture light curve
-    from TESS or uses AltaiPony's from path for standard 
+    from TESS or uses AltaiPony's from path for standard
     light curves. Needs specific naming convention.
     Applies pre-defined quality masks.
 
@@ -95,22 +95,22 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
                             campaign=sector)
         flc = fix_mask(flc)
     else:
-        flc = from_path(path, mission=mission, 
+        flc = from_path(path, mission=mission,
                         mode=mode, )#flux_type=flux_type)
-        
+
     return flc
 
 
 
 def fix_mask(flc):
-    '''Here the masks for different TESS 
-    sectors are defined and applied to 
+    '''Here the masks for different TESS
+    sectors are defined and applied to
     light curve fluxes.
-    
+
     Parameters:
     ------------
     flc : FlareLightCurve
-    
+
     Returns:
     ----------
     FlareLightCurve
@@ -139,22 +139,22 @@ def create_spherical_grid(num_pts):
     """Method see:
     https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
     answered by CR Drost
-    
+
     Coversion to cartesian coordinates:
     x = np.cos(theta) * np.sin(phi)
     y = np.sin(theta) * np.sin(phi)
     z = np.cos(phi);
-    
+
     Parameters:
     -----------
     num_pts : int
         number of grid points on the full sphere
-        
+
     Return:
     --------
     phi, theta - numpy arrays of latitude, longitude
     """
-    
+
     # This is CR Drost's solution to the sunflower spiral:
     indices = np.arange(0, num_pts, dtype=float) + 0.5
     phi = np.arccos(1 - 2 * indices/num_pts) #latitude
@@ -172,7 +172,7 @@ def create_spherical_grid(num_pts):
     q = np.where((1.5*np.pi < phi) & (2*np.pi > phi))
     phi[q] = phi[q] - np.pi*2
     theta = theta % (np.pi * 2)
-    
+
     return phi, theta
 
 
@@ -181,7 +181,7 @@ def calculate_inclination(s, eP=1./24/30):
     """Determine the inclination
     vsini, stellar radius, and rotation
     period.
-    
+
     Parameters:
     -----------
     s : pandas Series
@@ -194,7 +194,7 @@ def calculate_inclination(s, eP=1./24/30):
         automatically. Values is measured in days.
     Return:
     -------
-    inclination, uncertainty on inclination - 
+    inclination, uncertainty on inclination -
         astropy Quantities
     """
     # Get radius und and period, plus their uncerainties
@@ -204,25 +204,25 @@ def calculate_inclination(s, eP=1./24/30):
     # Get vsini and its uncertainty
     vsini = s.vsini_kms * u.km / u.s
     evsini = s.e_vsini_kms * u.km / u.s
-    
+
     # Caclulate sini
     sini = vsini * P / 2. / np.pi / R
-    
+
     # Calculate rotation velocity
     v = vsini / sini
-    
+
     # Calculate inclination
     incl = np.arcsin(sini)
-    
+
     # Calculate uncertainty on sini
     # Propagate uncertainties on R, vsini, and Prot
     t1 = vsini * P / (2. * np.pi * R**2) * eR
     t2 = P / (2. * np.pi * R) * evsini
     t3 = vsini / (2. * np.pi * R) * eP
     esini = np.sqrt(t1**2 + t2**2 + t3**2) *u.rad
-    
+
     # If inclincation is close to 90 degree
-    # Use taylor expansion of d/dx(arcsin(x)) 
+    # Use taylor expansion of d/dx(arcsin(x))
     # around x=1
     # to get uncertainty on inclination from sini
     if incl - np.pi / 2 * u.rad < 1e-3 * u.rad:
@@ -232,5 +232,5 @@ def calculate_inclination(s, eP=1./24/30):
     else:
         eincl = 1 / np.sqrt(1- sini**2) * esini
 
-    return (incl.to("deg"), eincl.to("deg"), 
+    return (incl.to("deg"), eincl.to("deg"),
             sini.decompose().value, esini.decompose().value)

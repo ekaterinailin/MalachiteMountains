@@ -93,23 +93,23 @@ def script_2_rotational_broadening_and_CCF_plot(carms, salt, key, wavmin, wavmax
     # see ENIRIC docs: https://eniric.readthedocs.io/en/latest/broadening.html#rotational-broadening
 
     # # Pick vsini grid
-    # vsinis = np.arange(33,38,.25)
+    vsinis = np.arange(33,38,.25)
 
 
     # # Set up the grid
-    # specs = pd.DataFrame({"wav":wav})
+    specs = pd.DataFrame({"wav":wav})
 
 
     # # Run the broadening with ENIRIC
-    # for vsini in vsinis:
-    #     specs[vsini] = broaden.rotational_convolution(wav, model.lambd, model.flux, vsini)
+    for vsini in vsinis:
+        specs[vsini] = broaden.rotational_convolution(wav, model.lambd, model.flux, vsini, epsilon=0.75)
 
 
     # Path to save the grid
     grid = f"{wavmin}_{wavmax}_{carms[key][3]}.csv"
 
     # # If you run the broadening, save results here
-    # specs.to_csv(f"../../data/eniric/{grid}", index=False)
+    specs.to_csv(f"../../data/eniric/{grid}", index=False)
 
 
     # Read in the grid of broadened spectra
