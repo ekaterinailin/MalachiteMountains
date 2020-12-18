@@ -145,7 +145,7 @@ if __name__ == "__main__":
    
     # Merge ID and suffix
     # Suffix should not resemble exoplanets
-    mapsuffix = {"a":" (2-flare)", "b": " (2-flare)", "c": " (h. u.)","":"", np.nan:""}
+    mapsuffix = {"a":" (2-flare)", "b": " (2-flare)", "c": " (0h. u.)","":"", np.nan:""}
     print(cp["ID"], cp.suffix)
     cp["TIC"] = "TIC " + cp.ID.astype(str).str[:3] + cp.suffix.map(mapsuffix)                               
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     # write rotation period to string
     cp[r"$P$ (min)"] = cp.apply(lambda x:
-                                       fr"{x.prot_d * 24. *60.:.3f} \pm {x.e_prot_d * 24. *60.:.3f}", axis=1)
+                                       fr"${x.prot_d * 24. *60.:.3f} \pm {x.e_prot_d * 24. *60.:.3f}$", axis=1)
     
     #write inclination
   #  cp[r"$i$ (deg)"] = cp.apply(lambda x: f"${x.inclination:.1f}\left(^{x.inclination_uperr:.1f}_{abs(x.inclination_lowerr):.1f}\right)$", axis=1)
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     both_to = [5,9,6,10,7,11,8,12]
     
     df3 = get_multicolumntab(df3, "TIC", columns, both, both_to,same, same_to)
-    df3 = df3.sort_values(by="SpT", axis=1)
+    df3 = df3.sort_values(by=r"$i$ (deg)", ascending=False, axis=1)
    # nc = 'c' * (df3.shape[1]-2) #number of middle columns
    # df3 = df3.set_index("TIC")
    # df3 = df3.T
