@@ -9,8 +9,6 @@ from astropy.constants import c, h, k_B, R_sun, L_sun
 from scipy.stats import binned_statistic
 
 
-#import matplotlib.pyplot as plt
-
 # Read in response curve ---------------------------------------------
 
 response_curve = {"TESS" : "TESS.txt",
@@ -185,6 +183,64 @@ def full_model_2flares(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
         radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
 
         flare = aflare_decoupled(phi, _phi_a, (_fwhm1, _fwhm2), _a*median,)
+
+        if radius<10: #deg
+            latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
+        else:
+            latitudes, longitudes = dot_ensemble_spherical(theta_a, 0, radius)
+        lamb, onoff, m = lightcurve_model(phi, latitudes, longitudes, flare, i, phi0=phi0)
+        ms.append(m)
+
+    m = ms[0]+ms[1]
+    return m + median
+
+
+def full_model_2flares_coupled(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
+              phi=None, num_pts=100, qlum=None,
+              Fth=None, R=None, median=0):
+    """Full model in the case of two flares that
+    originate from the same active region.
+
+    Parameters:
+    ------------
+    phi_a : tuple of float (0,2pi)
+        longitude of the flare peak in rad
+    theta_a : float (0, pi/2)
+        latitude of the flaring region in rad
+    a : tuple of float >0
+        relative amplitude of the flare
+    fwhm1 : tuple of float >0
+        rise FWHM of the flare in fractions of 2pi
+    fwhm2 : tuple of float >0
+        decay FWHM of the flare in fractions of 2pi
+    i : float
+        inclination in rad
+    phi0 : float (0,2pi)
+        longitude that is facing the observer a t=0
+    phi : array of floats >0
+        longitudes
+    num_pts : int
+        number of grid points
+    qlum : astropy Quantity
+        quiescent luminosity in defined band in erg/s
+    Fth : astropy Quantity
+        specific flux of the flare at a given temperature
+        and in a defined band in erg/s/cm^2
+    R : astropy Quantity
+        stellar radius
+    median : float
+        quiescent flux of the light curve
+
+    Return:
+    -------
+    array of floats -  model light curve
+    """
+    ms = []
+    for _phi_a, _a, _fwhm1, _fwhm2 in zip(phi_a, a, fwhm1, fwhm2):
+
+        radius = calculate_angular_radius(Fth, _a, qlum, R) # the amplitude is the real one observed from the front
+
+        flare = aflare(phi, _phi_a, (_fwhm1, _fwhm2), _a*median,)
 
         if radius<10: #deg
             latitudes, longitudes, pos = dot_ensemble_circular(theta_a, 0, radius, num_pts=num_pts)
