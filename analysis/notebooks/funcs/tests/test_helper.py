@@ -5,9 +5,7 @@ import pytest
 
 from ..helper import (no_nan_inf,
                       read_custom_aperture_lc,
-                      create_spherical_grid,
-                      fix_mask,
-                      calculate_inclination)
+                      create_spherical_grid,)
 
 from astropy.io import fits
 
@@ -19,56 +17,7 @@ CWD = "/".join(os.getcwd().split("/")[:-2])
 
 # We don't test fetch_lightcurve, because it's just a wrapper for read_custom_aperture
 
-# ----------------------------- TESTING calculate_inclination(s) --------------------
 
-def test_calculate_inclination():
-    
-    # Create some data to test:
-    df = pd.DataFrame({"rad":[.1, np.nan, .1, .1],
-                   "rad_err":[.005, .005, 0.005, 0.],
-                   "Prot_d":[.2, .2, .2, .2],
-                   "vsini_kms":[15, 15, 45, 15],
-                   "e_vsini_kms":[2, 2, 2, 0],
-                    "i":[36.3680921216061, np.nan,np.nan,36.3680921216061],
-                   "ei":[2.7137065322409555,np.nan,np.nan,0.13218263173757777]})
-    
-    # run on all rows
-    for i, s in df.iterrows():
-        i, ei, sini, esini = calculate_inclination(s)
-        if np.isnan(i):
-            assert np.isnan(s.i)
-            assert np.isnan(s.ei)
-        else:
-            assert i.value == s.i
-            assert ei.value == s.ei
-
-# -------------------------------- TESTING fix_mask(flc) ----------------------------
-
-def test_fix_mask():
-    # Select cadenceno range
-    start, stop = int(1e5),int(3e5)
-
-    # Define light curve
-    c = np.arange(start, stop)
-    t = np.linspace(1000,1030,stop-start)
-    f = np.random.rand(stop-start)
-    flc = FlareLightCurve(time=t, flux=f, cadenceno=c, campaign=10)
-
-    # Call function
-    flcc = fix_mask(flc)
-
-    # Do some checks
-    res = flcc.cadenceno[np.isnan(flcc.flux)] 
-    assert (((res >= 246227) & (res <= 247440)) | ((res >= 255110) & (res <= 257370))).all()
-
-
-    # A different case where the campaign has no custom mask
-    c = np.arange(start, stop)
-    t = np.linspace(1000,1030,stop-start)
-    f = np.random.rand(stop-start)
-    flc2 = FlareLightCurve(time=t, flux=f, cadenceno=c, campaign=18)
-    flcc2 = fix_mask(flc2)
-    assert (np.isnan(flcc2.flux) == False).all()
 
 # -------------------------------- TESTING create_spherical_grid(num_pts) ----------------------------
 

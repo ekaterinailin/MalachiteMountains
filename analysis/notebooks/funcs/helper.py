@@ -101,40 +101,6 @@ def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
     return flc
 
 
-
-def fix_mask(flc):
-    '''Here the masks for different TESS
-    sectors are defined and applied to
-    light curve fluxes.
-
-    Parameters:
-    ------------
-    flc : FlareLightCurve
-
-    Returns:
-    ----------
-    FlareLightCurve
-    '''
-    masks = {9: [(227352, 228550), (236220, 238250)],
-             10: [(246227,247440),(255110,257370)],
-             11:[(265912,268250),(275210,278500)],
-             8: [(208722,209250),(221400,221700)],
-             6: [(179661,180680)],
-             5: [(151586,151900),(160254,161353),(170000,170519)],
-             4: [(139000,139800),(140700,141161),(150652,150764)],
-             3: [(120940,121820)],
-             12: [(286200,286300)]}
-
-    if flc.campaign in masks.keys():
-        for sta, fin in masks[flc.campaign]:
-            flc.flux[np.where((flc.cadenceno >= sta) & (flc.cadenceno <= fin))] = np.nan
-    else:
-        warnings.warn(f"Campaign {flc.campaign} has no defined custom masks.")
-    flc.quality[:] = np.isnan(flc.flux)
-    return flc
-
-
-
 def create_spherical_grid(num_pts):
     """Method see:
     https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
@@ -177,60 +143,4 @@ def create_spherical_grid(num_pts):
 
 
 
-def calculate_inclination(s, eP=1./24/30):
-    """Determine the inclination
-    vsini, stellar radius, and rotation
-    period.
 
-    Parameters:
-    -----------
-    s : pandas Series
-        contains "rad", "rad_err", "Prot_d",
-        "vsini_kms", and "e_vsini_kms". No uncertainties
-        on "P". Instead, time resolution of light curve
-        is used as uncertainty.
-    eP : float
-        Set uncertainty to 2min for TESS light curves
-        automatically. Values is measured in days.
-    Return:
-    -------
-    inclination, uncertainty on inclination -
-        astropy Quantities
-    """
-    # Get radius und and period, plus their uncerainties
-    R, P = s.rad * R_sun, s.Prot_d * u.d
-    eR, eP = s.rad_err * R_sun, eP * u.d
-    print(s.ID, s.e_vsini_kms)
-    # Get vsini and its uncertainty
-    vsini = s.vsini_kms * u.km / u.s
-    evsini = s.e_vsini_kms * u.km / u.s
-
-    # Caclulate sini
-    sini = vsini * P / 2. / np.pi / R
-
-    # Calculate rotation velocity
-    v = vsini / sini
-
-    # Calculate inclination
-    incl = np.arcsin(sini)
-
-    # Calculate uncertainty on sini
-    # Propagate uncertainties on R, vsini, and Prot
-    t1 = vsini * P / (2. * np.pi * R**2) * eR
-    t2 = P / (2. * np.pi * R) * evsini
-    t3 = vsini / (2. * np.pi * R) * eP
-    esini = np.sqrt(t1**2 + t2**2 + t3**2) *u.rad
-
-    # If inclincation is close to 90 degree
-    # Use taylor expansion of d/dx(arcsin(x))
-    # around x=1
-    # to get uncertainty on inclination from sini
-    if incl - np.pi / 2 * u.rad < 1e-3 * u.rad:
-        eincl = 1 / np.sqrt(2) / np.sqrt(1 + sini) * esini
-    # At inclinations lower than that calculate the
-    # derivative directly
-    else:
-        eincl = 1 / np.sqrt(1- sini**2) * esini
-
-    return (incl.to("deg"), eincl.to("deg"),
-            sini.decompose().value, esini.decompose().value)
