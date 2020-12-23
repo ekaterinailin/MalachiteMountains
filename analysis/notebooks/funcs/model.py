@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 from .helper import no_nan_inf, create_spherical_grid
-from .flarefit import uninformative_prior, empirical_prior, calculate_posterior_value_that_can_be_passed_to_mcmc
+from .flarefit import (uninformative_prior, 
+                       empirical_prior, 
+                       calculate_posterior_value_that_can_be_passed_to_mcmc)
 
 import astropy.units as u
 from astropy.constants import c, h, k_B, R_sun, L_sun

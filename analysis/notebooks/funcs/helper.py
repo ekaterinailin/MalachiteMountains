@@ -8,12 +8,13 @@ from astropy.constants import R_sun
 import astropy.units as u
 
 from altaipony.flarelc import FlareLightCurve
-from altaipony.lcio import from_path
+from altaipony.lcio import from_mast
 
-import sys, os
+import sys
 
-CWD = "/work1/eilin/MultiperiodFlares/MalachiteMountains/data/lcs"#os.getcwd()
-CWD = "/home/ekaterina/Documents/001_science/MalachiteMountains/data/lcs"
+import os
+CWD = "/".join(os.getcwd().split("/")[:-3]) + "/data/lcs"
+
 
 # We do not test fetch_lightcurve because it's just a wrapper for read_custom_aperture_lc
 
@@ -40,65 +41,21 @@ def no_nan_inf(l):
     return True
 
 
-def fetch_lightcurve(target, flux_type="FLUX", path=CWD):
-    """Read in light curve from file.
+def fetch_lightcurve(target, flux_type="PDCSAP_FLUX"):
+    """Wrap `from_mast` to fetch a light curve from mast or
+    cached one locally.
 
     Parameters:
     -----------
-    target: Series
+    target: pandas Series
         Description of the target.
     flux_type : str
-        "PDCSAP_FLUX", "SAP_FLUX", "FLUX" or other
+        "PDCSAP_FLUX", "SAP_FLUX"
     """
-    path = (f"{path}/{target.ID}_{target.QCS:02d}_" \
-            f"{target.mission}_{target.typ}_{target.origin}.fits")
 
-    flc = read_custom_aperture_lc(path, mission=target.h_mission,
-                                  mode="LC", typ=target.origin,
-                                  TIC=target.ID, sector=target.QCS,
-                                  flux_type=flux_type)
-    return flc
-
-
-def read_custom_aperture_lc(path, typ="custom", mission="TESS", mode="LC",
-                            sector=None, TIC=None, flux_type="PDCSAP_FLUX"):
-    '''Read in custom aperture light curve
-    from TESS or uses AltaiPony's from path for standard
-    light curves. Needs specific naming convention.
-    Applies pre-defined quality masks.
-
-    Parameters:
-    -----------
-    path : str
-        path to file
-    flux_type : str
-        "PDCSAP_FLUX", "SAP_FLUX", "FLUX" or other
-
-    Returns:
-    --------
-    FlareLightCurve
-    '''
-    if typ=="custom":
-        hdu = fits.open(path)
-        data = hdu[1].data
-        if sector==None:
-            sector = int(path.split("-")[1][-2:])
-        if TIC==None:
-            TIC = int(path.split("-")[2])
-
-        flc = FlareLightCurve(time=data["TIME"],
-                            flux=data["FLUX"],
-                            flux_err=data["FLUX_ERR"],
-                            quality=data["QUALITY"],
-                            cadenceno=data["CADENCENO"],
-                            targetid=TIC,
-                            campaign=sector)
-        flc = fix_mask(flc)
-    else:
-        flc = from_path(path, mission=mission,
-                        mode=mode, )#flux_type=flux_type)
-
-    return flc
+    return from_mast(mission=target.h_mission, mode="LC",
+                    targetid=target.ID, c=target.QCS,
+                    flux_type=flux_type)
 
 
 def create_spherical_grid(num_pts):

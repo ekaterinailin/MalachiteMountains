@@ -17,8 +17,6 @@ from ..model import (aflare,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
                      lightcurve_model,
-                     full_model,
-                     full_model_2flares,
                      calculate_ED)
 
 
