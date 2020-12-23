@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from .helper import no_nan_inf, create_spherical_grid
+from .flarefit import uninformative_prior, empirical_prior, calculate_posterior_value_that_can_be_passed_to_mcmc
 
 import astropy.units as u
 from astropy.constants import c, h, k_B, R_sun, L_sun
@@ -28,11 +29,107 @@ for key, val in response_curve.items():
 
 PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
 
-#----------------------------------------------------------------------
+
+class FlareModulator:
+    def __init__(self, phi, flux, flux_err, qlum, R,
+                 median, nflares, iscoupled, num_pts=100,
+                 mission="TESS", flaret=1e4):
+        self.phi = phi
+        self.flux = flux
+        self.flux_err = flux_err
+        self.qlum = qlum
+        self.R = R
+        self.median = median
+        self.num_pts = num_pts
+        self.Fth = calculate_specific_flare_flux(mission, flaret=flaret)
+
+        self.nflares = nflares
+        self.iscoupled = iscoupled
+
+    def flare_template(self, params):
+        if self.iscoupled == True:
+            return aflare(self.phi, params[1], params[2], params[0]*self.median)
+        elif self.iscoupled == False:
+            return aflare_decoupled(self.phi, params[1], params[2:4], params[0]*self.median)
+
+    def modulated_flux(self, theta, phi0, i, flareparams):
+        
+
+        ms = [] # list of flares
+
+        # model each flare
+        for params in flareparams:
+
+            radius = calculate_angular_radius(self.Fth, params[0], self.qlum, self.R) # the amplitude is the real one observed from the front
+         
+            flare = self.flare_template(params)
+      
+            if radius<10: #deg
+                latitudes, longitudes, pos = dot_ensemble_circular(theta, 0, radius, num_pts=self.num_pts)
+            else:
+                latitudes, longitudes = dot_ensemble_spherical(theta, 0, radius)
+
+            lamb, onoff, m = lightcurve_model(self.phi, latitudes, longitudes, flare, i, phi0=phi0)
+            ms.append(m)
+        
+        # sum contributions from each flare and add the median flux
+        return sum(ms, self.median)
+
+    def neg_log_likelihood(self, params):
+        """structure of params:
+
+        index | value
+        -----------------------------------------------------------------------
+        0     | latitude
+        1     | longitude at t0
+        2     | inclination
+        3+    | (number of flares f1, f2, ...) x (number of parameters a,b,c...) 
+                as in [f1a, f1b, f1c, f2a, f2b, f2c]
+ 
+        """
+        theta, phi0, i =  params[:3]
+        flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
+        model = self.modulated_flux(theta, phi0, i, flareparams)
+
+        fr2 = self.flux_err**2
+ 
+        val = -0.5 * np.sum((self.flux - model) ** 2 / fr2 + np.log(fr2))
+        return val
+
+
+    def log_prior(self, params, phi_a_min=(0,0.),
+                  phi_a_max=(1e9,1e9), theta_a_min=-np.pi/2.,
+                  theta_a_max=np.pi/2., a_min=(0,0), a_max=(1e9,1e9),
+                  fwhm_min=(0,0), fwhm_max=(1e9,1e9), phi0_min=-2*np.pi,
+                  phi0_max=2*np.pi, g=None):
+
+        """
+
+        Parameters:
+
+
+        """
+        theta, phi0, i =  params[:3]
+        flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
+
+        prior = (uninformative_prior(theta, theta_a_min, theta_a_max) + 
+                 uninformative_prior(phi0, phi0_min, phi0_max) +  
+                 empirical_prior(i, g)) 
+
+        for i, flare in enumerate(flareparams): 
+            prior += (uninformative_prior(flare[0], a_min[i], a_max[i]) +
+                      uninformative_prior(flare[1], phi_a_min[i], phi_a_max[i]))
+        
+            for fwhm in flare[2:]:
+                prior += uninformative_prior(fwhm, fwhm_min[1], fwhm_max[1])
+
+        return calculate_posterior_value_that_can_be_passed_to_mcmc(prior)
+
+
 
 def full_model(phi_a, theta_a, a, fwhm1, fwhm2, i, phi0=0,
               phi=None, num_pts=100, qlum=None,
-              Fth=None, R=None, median=0):
+              Fth=None, R=None, median=0, ):
     """Full model.
 
     Parameters:
