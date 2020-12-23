@@ -72,27 +72,7 @@ def empirical_prior(x, g):
     else:
         return  g(x)
 
-def neg_log_prob(theta, phi, flux, flux_err, qlum, Fth, R, median, kww, g=None):
-    """Posterior probability to pass to MCMC sampler.
-    """
-    lp = log_prior_2flares(theta, g=g, **kww)
 
-    if not np.isfinite(lp):
-        print("no prior")
-        return -np.inf
-
-    try:
-        ll = log_likelihood_2flares(theta, phi, flux, flux_err, qlum, Fth, R, median)
-
-    except:
-        print("no loglike")
-        return -np.inf
-
-    if np.isnan(ll):
-        print("nan loglike")
-        return -np.inf
-
-    return lp + ll
 
 
 
