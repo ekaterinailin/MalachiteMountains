@@ -1,10 +1,14 @@
 import pytest
 import numpy as np
+import pandas as pd
 
 import copy
 
 import astropy.units as u
 from astropy.constants import  R_sun, b_wien
+
+# Define emprical prior as superposition of two Gaussian distributions
+from astropy.modeling.models import Gaussian1D
 
 from ..model import (aflare,
                      daylength,
@@ -17,10 +21,284 @@ from ..model import (aflare,
                      calculate_specific_flare_flux,
                      calculate_angular_radius,
                      lightcurve_model,
-                     calculate_ED)
+                     calculate_ED,
+                     FlareModulator)
+
+# ------------ TESTING FlareModulator class and its methods --------------------
+
+def test_FlareModulator():
+    # TEST ALL FOUR CURRENTLY IMPLEMENTED FLARE VERSIONS 
+    # (1- and 2- flare, coupled- and decoupled)
+
+    # ------------------------------------------------------------
+    # FIRST, set parameters that stay the same
+
+    # set stellar parameters
+    prot = .1
+    qlum = 5e29 * u.erg / u.s
+    R = 0.2 * R_sun
+
+    # set baseline time series
+    phi = np.linspace(12,30,500)
+    time = phi/2./np.pi * prot
+    median = 100
+
+    # set flare parameters
+    a =.4
+    phia = 13.
+    fwhm = .3
+
+    # define flux
+    flux = aflare(phi, phia, a, fwhm) * median + median
+    flux_err = 0.01 * flux
+
+    # define an empirical prior on inclination
+    mids = np.linspace(30,80,130)
+    x = mids /180 *np.pi
+    g1 = Gaussian1D(amplitude=.2, mean=55/180*np.pi, stddev=0.05)
+    g1.bounding_box.amplitude = (0, 1.) 
+    g1.bounding_box.mean = (0,np.pi/2)
+    g2 = Gaussian1D(amplitude=0.05, mean=56/180*np.pi, stddev=.05)
+    g2.bounding_box.amplitude = (.0, 1.)
+    g2.bounding_box.mean = (0,np.pi/2)
+
+    gincl = g1 + g2
+
+    # ------------------------------------------------------------
+    # COUPLED 1-flare solution
+
+    # set model specifications
+    nflares = 1
+    iscoupled = True
+
+    # construct model
+    FM = FlareModulator(phi, flux, flux_err, qlum, 
+                        R, median, nflares, iscoupled)
+
+    # Check some params and default values
+
+    assert (FM.phi == phi).all()
+    assert (FM.flux == flux).all()
+    assert (FM.flux_err == flux_err).all()
+    assert FM.qlum == qlum
+    assert FM.R == R
+    assert FM.median == median
+    assert FM.num_pts == 100
+    assert FM.Fth == calculate_specific_flare_flux("TESS", flaret=1e4)
+
+    assert FM.nflares == nflares
+    assert FM.iscoupled == iscoupled
+
+    # set some parameters for latitude, longitude and inclination
+    theta, phi0, i = 60 * np.pi / 180, 5.5, 55 * np.pi / 180
+    params = [theta, phi0, i, a, phia, fwhm]
+
+    # calculate underlying flare
+    underlying_flare = FM.flare_template(params[3:])
+
+    # do some checks
+    assert np.max(underlying_flare) < .4
+    assert np.max(underlying_flare) > .38
+    assert underlying_flare[0] == 0.
+    assert underlying_flare[-1] < 1e-3
+
+    #calculate modulated flux
+    modelflux = FM.modulated_flux(*params[:3], [params[3:]])
+
+    # do some sanity checks
+    assert (modelflux <= underlying_flare * 100 + 100.).all()
+    assert (modelflux >= 100.).all()
+    assert modelflux[0] == 100.
+    assert modelflux[-1] < 100 + 1e-3
+
+    # calculate log likelihood for initial parameters 
+    # should be closer than underlying flare
+    FM.flux = modelflux
+    assert FM.log_likelihood(params) == pytest.approx(-5.7546, rel=1e-3)
+    FM.flux = underlying_flare
+    assert FM.log_likelihood(params) == pytest.approx(-2469724.297, rel=1e-2)
+
+    # prior value should be the same regardless of observations
+    prior = FM.log_prior(params, g=gincl)
+    FM.flux = modelflux
+    assert FM.log_prior(params, g=gincl) == prior
+
+    # giving no empirical prior on inclination results in an error
+    with pytest.raises(TypeError) as e:
+        FM.log_prior(params, g=None)
+
+    # ------------------------------------------------------------
+
+    # ------------------------------------------------------------
+    # DECOUPLED 1-flare solution - mostly the same results
+
+    # set model specifications
+    fwhmdec = .2
+    iscoupled = False
+
+    # keep the rest
+    FM = FlareModulator(phi, flux, flux_err, qlum, R, median, nflares, iscoupled)
+
+    # Check that the new parameter is set
+    assert FM.iscoupled == iscoupled
+
+    # redefine parameters in correct order
+    params = [theta, phi0, i, a, phia, fwhm, fwhmdec]
+
+    # calculate underlying flare
+    underlying_flare = FM.flare_template(params[3:])
+
+    # do some checks
+    assert np.max(underlying_flare) < .4
+    assert np.max(underlying_flare) > .38
+    assert underlying_flare[0] == 0.
+    assert underlying_flare[-1] < 1e-3
 
 
+    #calculate modulated flux
+    modelflux = FM.modulated_flux(*params[:3], [params[3:]])
 
+    # do some sanity checks
+    assert (modelflux <= underlying_flare * 100 + 100.).all()
+    assert (modelflux >= 100.).all()
+    assert modelflux[0] == 100.
+    assert modelflux[-1] < 100 + 1e-3
+
+    # calculate log likelihood for initial parameters 
+    # should be closer than underlying flare
+    FM.flux = modelflux
+    assert FM.log_likelihood(params) == pytest.approx(-5.7546, rel=1e-3)
+    FM.flux = underlying_flare
+    assert FM.log_likelihood(params) == pytest.approx(-2469724.297, rel=1e-2)
+
+    # prior value should be the same regardless of observations
+    prior = FM.log_prior(params, g=gincl)
+    FM.flux = modelflux
+    assert FM.log_prior(params, g=gincl) == prior
+
+    # giving no empirical prior on inclination results in an error
+    with pytest.raises(TypeError) as e:
+        FM.log_prior(params, g=None)
+
+    # ------------------------------------------------------------
+
+    # ------------------------------------------------------------
+    # COUPLED 2-flare solution 
+
+    a1, a2 =.4, .3
+    phia1, phia2 = 13, 16.
+    fwhm1, fwhm2 = .4, .5
+
+    # define flux
+    flux = (aflare(phi,phia1, a1, fwhm1) + aflare(phi,phia2, a2, fwhm2) + 1.) * median
+    flux_err = 0.01 * flux
+
+    # set model specifications
+    nflares = 2
+    iscoupled = True
+
+    # keep the rest
+    FM = FlareModulator(phi, flux, flux_err, qlum, R, median, nflares, iscoupled)
+
+    # Check that the new parameter is set
+    assert FM.iscoupled == iscoupled
+    assert FM.nflares == nflares
+
+    # redefine parameters in correct order
+    params = [theta, phi0, i, a1, phia1, fwhm1, a2, phia2, fwhm2]
+
+    # calculate underlying flare
+    underlying_flare = FM.flare_template(params[3:]) + FM.flare_template(params[6:])
+
+    # do some checks
+    assert np.max(underlying_flare) <= .4
+    assert np.max(underlying_flare) > .38
+    assert underlying_flare[0] == 0.
+    assert underlying_flare[-1] < 1e-3
+
+    #calculate modulated flux
+    flareparams = np.array(params[3:]).reshape(FM.nflares, len(params[3:])//FM.nflares)
+    modelflux = FM.modulated_flux(*params[:3], flareparams)
+
+    # do some sanity checks
+    assert (modelflux <= underlying_flare * 100 + 100.).all()
+    assert (modelflux >= 100.).all()
+    assert modelflux[0] == 100.
+
+    assert modelflux[-1] < 100.1
+
+    # calculate log likelihood for initial parameters 
+    # should be closer than underlying flare
+
+    FM.flux = modelflux
+    assert FM.log_likelihood(params) == pytest.approx(-14.4552, rel=1e-3)
+
+    FM.flux = underlying_flare
+    assert FM.log_likelihood(params) == pytest.approx(-2433738.246, rel=1e-2)
+
+    # prior value should be the same regardless of observations
+    prior = FM.log_prior(params, g=gincl)
+    FM.flux = modelflux
+    assert FM.log_prior(params, g=gincl) == prior
+
+    # giving no empirical prior on inclination results in an error
+    with pytest.raises(TypeError) as e:
+        FM.log_prior(params, g=None)
+
+    # ------------------------------------------------------------
+
+    # ------------------------------------------------------------
+    # DECOUPLED 2-flare solution 
+
+    # set model specifications
+    fwhm1dec, fwhm2dec = .5, .5
+    iscoupled = False
+
+    # keep the rest
+    FM = FlareModulator(phi, flux, flux_err, qlum, R, median, nflares, iscoupled)
+
+    # Check that the new parameter is set
+    assert FM.iscoupled == iscoupled
+
+    # redefine parameters in correct order
+    params = [theta, phi0, i, a1, phia1, fwhm1, fwhm1dec,  a2, phia2, fwhm2, fwhm2dec]
+
+    # calculate underlying flare
+    underlying_flare = FM.flare_template(params[3:]) + FM.flare_template(params[7:])
+
+    # do some checks
+    assert np.max(underlying_flare) <= .4
+    assert np.max(underlying_flare) > .38
+    assert underlying_flare[0] == 0.
+    assert underlying_flare[-1] < 1e-3
+
+    #calculate modulated flux
+    flareparams = np.array(params[3:]).reshape(FM.nflares, len(params[3:])//FM.nflares)
+    modelflux = FM.modulated_flux(*params[:3], flareparams)
+
+    # do some sanity checks
+    assert (modelflux <= underlying_flare * 100 + 100.).all()
+    assert (modelflux >= 100.).all()
+    assert modelflux[0] == 100.
+    assert modelflux[-1] < 100.1
+
+    # calculate log likelihood for initial parameters 
+    # should be closer than underlying flare
+    FM.flux = modelflux
+    assert FM.log_likelihood(params) == pytest.approx(-14.4552, rel=1e-3)
+
+    FM.flux = underlying_flare
+    assert FM.log_likelihood(params) == pytest.approx(-2433738.246, rel=1e-2)
+
+    # prior value should be the same regardless of observations
+    prior = FM.log_prior(params, g=gincl)
+    FM.flux = modelflux
+    assert FM.log_prior(params, g=gincl) == prior
+
+    # giving no empirical prior on inclination results in an error
+    with pytest.raises(TypeError) as e:
+        FM.log_prior(params, g=None)
+    # ------------------------------------------------------------
 
 
 # ---------------------- TESTING aflare(t, tpeak, dur, ampl, upsample=False, uptime=10) ---------------
@@ -58,7 +336,7 @@ def test_aflare_and_equivalent_duration():
     fl_flux = aflare(time, 1.734, 15, 1.0)
     assert np.max(fl_flux) == pytest.approx(1,rel=1e-2)
 
-# ---------------------------- TESTING black_body_spectrum(wav, T) ------------------------------------- 
+# --------------- TESTING black_body_spectrum(wav, T) -------------------------- 
 
 def test_black_body_spectrum():
     

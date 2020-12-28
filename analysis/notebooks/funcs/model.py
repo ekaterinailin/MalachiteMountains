@@ -50,9 +50,9 @@ class FlareModulator:
 
     def flare_template(self, params):
         if self.iscoupled == True:
-            return aflare(self.phi, params[1], params[2], params[0]*self.median)
+            return aflare(self.phi, params[1], params[2], params[0])
         elif self.iscoupled == False:
-            return aflare_decoupled(self.phi, params[1], params[2:4], params[0]*self.median)
+            return aflare_decoupled(self.phi, params[1], params[2:4], params[0])
 
     def modulated_flux(self, theta, phi0, i, flareparams):
         
@@ -72,7 +72,7 @@ class FlareModulator:
                 latitudes, longitudes = dot_ensemble_spherical(theta, 0, radius)
 
             lamb, onoff, m = lightcurve_model(self.phi, latitudes, longitudes, flare, i, phi0=phi0)
-            ms.append(m)
+            ms.append(m * self.median)
         
         # sum contributions from each flare and add the median flux
         return sum(ms, self.median)
@@ -662,7 +662,7 @@ def aflare_decoupled(t, tpeak, dur, ampl, upsample=False, uptime=10):
     '''
     _fr = [1.00000, 1.94053, -0.175084, -2.24588, -1.12498]
     _fd = [0.689008, -1.60053, 0.302963, -0.278318]
-    print(dur)
+
     fwhm1, fwhm2 = dur # crude approximation for a triangle shape would be dur/2.
 
     if upsample:
