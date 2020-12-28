@@ -4,7 +4,7 @@
 from scipy import optimize
 import numpy as np
 
-# from .model import full_model, full_model_2flares
+import copy
 
 # I do not test the prior, log likelihood, or log probability functions.
 # I do test the underlying functions like gaussian_prior etc.
@@ -55,7 +55,7 @@ def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
     else:
         return lp
 
-# --------------- USING EMPIRICAL PRIOR FOR INCLINATION ----------------------------
+# --------------- USING EMPIRICAL PRIOR FOR INCLINATION ------------------------
 
 @logit
 def empirical_prior(x, g):
@@ -73,7 +73,48 @@ def empirical_prior(x, g):
         return  g(x)
 
 
+# ---------------- POST-ANALYSIS -----------------------------------------------
 
+
+
+def convert_posterior_units(res, prot, phi, time):
+    """Convert radians to degrees, phases to times
+    or longitudes.
+    
+    Required column names: ['latitude_rad', 'phase_0', 
+                            'i_rad', 'phase_peak']
+    Optional column names: anything with 'fwhm'
+    
+    Parameters:
+    -----------
+    res : pandas.DataFrame
+        results from MCMC sampling 
+    prot : float
+        rotation period in days
+    """
+    r = copy.deepcopy(res)
+    
+    # map phi0 to phi_peak longitude still call it phi0
+    r.phase_0 = (r.phase_peak - r.phase_0 + 2*np.pi) % (2. * np.pi) / np.pi * 180. # 0 would be facing the observer
+
+    #map phi_a_distr to t0_d:
+    r.phase_peak = np.interp(r.phase_peak, phi, time)
+
+    # convert theta_f to degrees
+    r.latitude_rad = r.latitude_rad / np.pi * 180.
+
+    # convert FWHMs to days
+    for fwhmcol  in [i for i in r.columns if "fwhm" in i]:
+        r[fwhmcol] = r[fwhmcol] / 2 / np.pi * prot
+
+    # convert i to degrees
+    r.i_rad = r.i_rad / np.pi * 180.
+
+    columns = ["latitude_deg", "phase_deg","i_deg","a","t0_d","fwhmi","fwhmg"]
+
+    resultframe = r.rename(index=str, columns=dict(zip(r.columns.values,columns)))
+
+    return resultframe
 
 
 

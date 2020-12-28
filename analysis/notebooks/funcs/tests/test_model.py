@@ -21,100 +21,6 @@ from ..model import (aflare,
 
 
 
-# ---------------------- TESTING full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
-#                                           phi=None, num_pts=100, qlum=None,
-#                                           Fth=None, R=None, median=0)     
-
-def test_full_model_2flares(): 
-    phi_a = (6.1, 7.1)
-    theta_a = 50./180*np.pi
-    a = (1., .7)
-    fwhm = (1.5, 0.8)
-    i = 50./180*np.pi
-    Fth = 1e13 * u.erg/u.s/(u.cm**2)
-    qlum = 1e32 *u.erg/u.s
-    R = .09* R_sun
-    phi = np.linspace(0,20,3000)
-
-    # Initial version:
-
-    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-
-
-    assert np.max(m) == pytest.approx(20,rel=.1)
-    assert len(m) == 3000
-
-
-    # Amplitude 0 gives zero excess flux
-
-    a = (0.,0.)
-    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-    assert np.max(m) == 10
-    assert len(m) == 3000
-
-    # Pole on view and pole on flare
-
-    a = (1.,.7)
-    theta_a=np.pi/2
-    i = 0
-    m = full_model_2flares(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-    assert np.max(m) == pytest.approx(20,rel=.05)
-    assert len(m) == 3000
-    assert phi[np.argmax(m)] == pytest.approx(phi_a[0],rel=0.01)
-
-# ---------------------- TESTING full_model(phi_a, theta_a, a, fwhm, i, phi0=0,-------------------------
-#                                           phi=None, num_pts=100, qlum=None,
-#                                           Fth=None, R=None, median=0)       
-
-def test_full_model():
-
-    phi_a = 6.1
-    theta_a = 50./180*np.pi
-    a = 1.
-    fwhm = 1.5
-    i = 50./180*np.pi
-    Fth=1e13 * u.erg/u.s/(u.cm**2)
-    qlum=1e32 *u.erg/u.s
-    R=.09* R_sun
-    phi = np.linspace(0,20,3000)
-
-    # Initial version:
-
-    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-
-
-    assert np.max(m) == pytest.approx(20,rel=.1)
-    assert len(m) == 3000
-
-    # Amplitude 0 gives zero excess flux
-
-    a = 0
-    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-    assert np.max(m) == 10
-    assert len(m) == 3000
-
-    # Pole on view and pole on flare
-
-    a = 1.
-    theta_a=np.pi/2
-    i = 0
-    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=0,
-                  phi=phi, num_pts=100, qlum=qlum,
-                  Fth=Fth, R=R, median=10)
-    assert np.max(m) == pytest.approx(20,rel=.05)
-    assert len(m) == 3000
-    assert phi[np.argmax(m)] == pytest.approx(phi_a,rel=0.01)
-
 
 
 # ---------------------- TESTING aflare(t, tpeak, dur, ampl, upsample=False, uptime=10) ---------------
@@ -129,7 +35,7 @@ def test_aflare_and_equivalent_duration():
     # Test a large flare without upsampling
     fl_flux = aflare(time, 11.400134, 1.415039, 110.981950)
     integral = np.sum(np.diff(x) * fl_flux[:-1])
-    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    assert integral == pytest.approx(2.24e7,rel=1e-2)
     
     # Test a flare with 0 amplitude
     fl_flux = aflare(time, 11.400134, 1.415039, 0)
@@ -139,14 +45,14 @@ def test_aflare_and_equivalent_duration():
     # test a large flare with upsampling
     fl_flux = aflare(time, 11.400134, 1.415039, 110.981950, upsample=True)
     integral = np.sum(np.diff(x) * fl_flux[:-1])
-    assert integral == pytest.approx(1.22e7,rel=1e-2)
+    assert integral == pytest.approx(2.24e7,rel=1e-2)
     
     
     # Test a smaller undersampled flare
     fl_flux = aflare(time, 11.400134, 1/48., 1.0)
     x = time * 60.0 * 60.0 * 24.0
     integral = np.sum(np.diff(x) * fl_flux[:-1])
-    assert integral == pytest.approx(1453.1179,rel=1e-2)
+    assert integral == pytest.approx(3333.5296,rel=1e-2)
     
     # Test the amplitude
     fl_flux = aflare(time, 1.734, 15, 1.0)
@@ -377,28 +283,57 @@ def test_calculate_ED():
     
     # unit testing
     #--------------
+
+    # COUPLED flare model
     
     # Throw error with bad values
     with pytest.raises(ValueError):
-        calculate_ED(t, np.nan, 1, 0)
+        calculate_ED(t, np.nan, 1, 0, decoupled=False)
     with pytest.raises(ValueError):
-        calculate_ED(t, 2, np.nan, 0)
+        calculate_ED(t, 2, np.nan, 0, decoupled=False)
     with pytest.raises(ValueError):
-        calculate_ED(t, 2, 5, np.nan)
+        calculate_ED(t, 2, 5, np.nan, decoupled=False)
     
     # Return NaN if any time values are not properly defined
     t2 = copy.copy(t)
     t2[4:12]= np.nan
-    assert np.isnan(calculate_ED(t2, 2, 5, 1))
+    assert np.isnan(calculate_ED(t2, 2, 5, 1, decoupled=False))
     
     # integration testing
     #---------------------
     
     # 0 duration
-    assert calculate_ED(t, 2, 0, 1) == 0.
+    assert calculate_ED(t, 2, 0, 1, decoupled=False) == 0.
     
     # 0 amplitude
-    assert calculate_ED(t, 2, 1, 0) == 0.
+    assert calculate_ED(t, 2, 1, 0, decoupled=False) == 0.
     
     #triangle approximation
-    assert calculate_ED(t, 1, 1, .1) < .1 * 60.0 * 60.0 * 24.0 
+    assert calculate_ED(t, 1, 1, .1, decoupled=False) < .2 * 60.0 * 60.0 * 24.0 
+
+    # DECOUPLED flare model
+    
+    # Throw error with bad values
+    with pytest.raises(ValueError):
+        calculate_ED(t, np.nan, (1.,1.), 0,)
+    with pytest.raises(ValueError):
+        calculate_ED(t, 2, (np.nan, np.nan), 0,)
+    with pytest.raises(ValueError):
+        calculate_ED(t, 2, (5.,5.), np.nan,)
+    
+    # Return NaN if any time values are not properly defined
+    t2 = copy.copy(t)
+    t2[4:12]= np.nan
+    assert np.isnan(calculate_ED(t2, 2, [5.,5.], 1))
+    
+    # integration testing
+    #---------------------
+    
+    # 0 duration
+    assert calculate_ED(t, 2, (0.,0.), 1,) == 0.
+    
+    # 0 amplitude
+    assert calculate_ED(t, 2, (1.,1.), 0,) == 0.
+    
+    #triangle approximation
+    assert calculate_ED(t, 1, (1.,1.), .1) < .2 * 60.0 * 60.0 * 24.0 

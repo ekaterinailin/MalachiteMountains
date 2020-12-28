@@ -88,10 +88,6 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-4):
     Prot_d = props[props["id"] == int(ID)].iloc[0].prot_d
     print(Prot_d)
 
-    # Set up the backend
-    # Don't forget to clear it in case the file already exists
-    filename = f"{CWD}/analysis/results/mcmc/{target.tstamp}_{target.ID}{suffix}_MCMC.txt"
-
     # Get prior distribution for inclination
     inclination_path =  f"{CWD}/data/inclinations/{target.ID}_post_compound.p"
     gload = pickle.load( open( inclination_path, "rb" ) )

@@ -591,7 +591,7 @@ def aflare(t, tpeak, dur, ampl, upsample=False, uptime=10):
     _fr = [1.00000, 1.94053, -0.175084, -2.24588, -1.12498]
     _fd = [0.689008, -1.60053, 0.302963, -0.278318]
 
-    fwhm = dur/2. # crude approximation for a triangle shape would be dur/2.
+    fwhm = dur # crude approximation for a triangle shape would be dur/2.
 
     if upsample:
         dt = np.nanmedian(np.diff(t))
@@ -662,7 +662,7 @@ def aflare_decoupled(t, tpeak, dur, ampl, upsample=False, uptime=10):
     '''
     _fr = [1.00000, 1.94053, -0.175084, -2.24588, -1.12498]
     _fd = [0.689008, -1.60053, 0.302963, -0.278318]
-
+    print(dur)
     fwhm1, fwhm2 = dur # crude approximation for a triangle shape would be dur/2.
 
     if upsample:
@@ -706,7 +706,7 @@ def aflare_decoupled(t, tpeak, dur, ampl, upsample=False, uptime=10):
 
     return flare
 
-def calculate_ED(t, t0, fwhm1, fwhm2, ampl):
+def calculate_ED(t, t0, fwhm, ampl, decoupled=True):
     """Calculate equiavlent duration
     of model flare.
 
@@ -725,6 +725,13 @@ def calculate_ED(t, t0, fwhm1, fwhm2, ampl):
     --------
     ED in seconds - float
     """
-    if no_nan_inf([t0, fwhm1, fwhm2, ampl]) == False:
+    if decoupled==True:
+        fwhm_ = fwhm
+        model = aflare_decoupled
+    else:
+        fwhm_ = [fwhm]
+        model = aflare
+
+    if no_nan_inf([t0, *fwhm_, ampl]) == False:
         raise ValueError("flaret is NaN or Inf.")
-    return np.sum(np.diff(t) * aflare_decoupled(t, t0, (fwhm1,fwhm2), ampl)[:-1]) * 60.0 * 60.0 * 24.0
+    return np.sum(np.diff(t) * model(t, t0, fwhm, ampl)[:-1]) * 60.0 * 60.0 * 24.0

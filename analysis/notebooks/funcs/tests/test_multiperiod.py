@@ -5,9 +5,9 @@ import pandas as pd
 
 import os
 
-from astropy.io import fits
+from altaipony.flarelc import FlareLightCurve
 
-from ..multiperiod import find_period, remove_sinusoidal
+from ..multiperiod import find_period
 
 CWD = os.getcwd()
 
@@ -39,9 +39,13 @@ def test_find_period():
                         "prefix": "TIC"})
     
     # Test a case
-    hours = 6
-    flc = create_lc(hours)
-    period, mfp = find_period(target, minfreq=.1, maxfreq=40, plot=False, save=False)
+    start, stop, N, hours = 1000, 1020, 10000, 6
+    flc = FlareLightCurve(time=np.linspace(start, stop, N),
+                          flux=400 + 50*np.sin(np.linspace(start, stop, N)*np.pi*48/hours),
+                          flux_err=20*np.random.rand(N),
+                          quality=np.full(N,0),
+                          cadenceno= np.arange(100,N+100))
+    period, mfp = find_period(target, minfreq=.1, maxfreq=40, plot=False, save=False, flc=flc, custom=False)
 
     # Do some checks
     assert period.value == pytest.approx(hours)
