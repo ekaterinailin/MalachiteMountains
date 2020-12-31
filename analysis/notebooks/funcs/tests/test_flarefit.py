@@ -6,8 +6,60 @@ import pandas as pd
 
 from ..flarefit import (uninformative_prior,
                         calculate_posterior_value_that_can_be_passed_to_mcmc,
-			convert_posterior_units)
+		            	convert_posterior_units,
+			            empirical_prior)
 
+
+# Define emprical prior as superposition of two Gaussian distributions
+from astropy.modeling.models import Gaussian1D
+
+
+# ------------------- TESTING empirical_prior(x, g) ----------------------------
+
+def test_empirical_prior():
+    # set up some emprical prior
+    x = np.linspace(0,40,100) / 180 * np.pi
+    g1 = Gaussian1D(amplitude=.2, mean=21 / 180 * np.pi, stddev=0.05)
+    g1.bounding_box.amplitude = (0, 1.) 
+    g1.bounding_box.mean = (0, np.pi/2)
+    g2 = Gaussian1D(amplitude=0.05, mean=23 / 180 * np.pi, stddev=.05)
+    g2.bounding_box.amplitude = (.0, 1.)
+    g2.bounding_box.mean = (0, np.pi / 2)
+
+    # g is astropy CompoundModel
+    g = g1 + g2
+
+    # integration works
+    assert g(21 / 180 * np.pi) == pytest.approx(0.239186373422815)
+    assert empirical_prior(21 / 180 * np.pi, g) == np.log(0.239186373422815)
+
+    # 0. is included
+    assert g(0.) < 1e-12
+    assert g(0.) > 0.
+    assert empirical_prior(0., g)  == np.log(g(0.))
+
+    # bounding box works
+    assert g(50. / 180. * np.pi) < 1e-12
+    assert g(50. / 180. * np.pi) > 0.
+    assert empirical_prior(50. / 180. * np.pi, g) == np.log(g(50. / 180. * np.pi))
+
+    # outside of allowed inclination of pi/2
+    assert g(np.pi * .6) == pytest.approx(0.)
+    assert ~ np.isfinite(empirical_prior(1.1 * np.pi, g))
+
+    # nan returns nan
+    assert np.isnan(g(np.nan))
+    assert np.isnan(empirical_prior(np.nan,g))
+
+    # cannot pass nan or float as g
+    with pytest.raises(TypeError) as e:
+        empirical_prior(0.,np.nan)
+
+    with pytest.raises(TypeError) as e:
+        empirical_prior(0.,4.)
+
+    # g will accept a function like sqrt though
+    assert empirical_prior(1.2,np.sqrt) == pytest.approx(0.09116077839697724)
 
 
 # ---------- TESTING convert_posterior_units(res, prot, phi, time) -------------

@@ -10,6 +10,9 @@ Ekaterina Ilin, 2020, MIT License
 
 This module contains functions used to 
 calculate and fit rotation periods.
+
+We are only testing find_period, the rest are
+scripts we call in the notebooks.
 """
 
 
@@ -259,9 +262,6 @@ def get_period_get_amplitude(target, plot=False, save=False, plotmini=False):
     period, mfp = find_period(target, save=False, plot=False, 
                               custom=target.origin, flc=flck)
 
-    # Optimize for the model parameters using
-
-    
     # pick only valid data points
     cond = np.invert(np.isnan(flck.time)) & np.invert(np.isnan(flck.flux))
     
@@ -350,7 +350,7 @@ def log_prior(p,):
     """
     
    
-    prior = (uninformative_prior(p[0], 0.1, .2) +
+    prior = (uninformative_prior(p[0], 0.05, 2.) +
              uninformative_prior(p[1], 0, 1e6) +
              uninformative_prior(p[2],  -1e6, 1e6) +
              uninformative_prior(p[3], -1e6, 1e6)  +

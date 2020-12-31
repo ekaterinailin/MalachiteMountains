@@ -11,6 +11,7 @@ from astropy.constants import  R_sun, b_wien
 from astropy.modeling.models import Gaussian1D
 
 from ..model import (aflare,
+                     aflare_decoupled,
                      daylength,
                      on_off,
                      lambert,
@@ -615,3 +616,69 @@ def test_calculate_ED():
     
     #triangle approximation
     assert calculate_ED(t, 1, (1.,1.), .1) < .2 * 60.0 * 60.0 * 24.0 
+
+
+def test_aflare_decoupled():
+    # repeat the tests for aflare
+
+    n = 1000
+    time = np.arange(0, n/48, 1./48.)
+    x = time * 60.0 * 60.0 * 24.0
+
+    # Test a large flare without upsampling
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039]*2, 110.981950)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(2.24e7,rel=1e-2)
+
+    # Test a flare with 0 amplitude
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039]*2, 0)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == 0.
+
+    # test a large flare with upsampling
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039]*2, 110.981950, upsample=True)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(2.24e7,rel=1e-2)
+
+
+    # Test a smaller undersampled flare
+    fl_flux = aflare_decoupled(time, 11.400134, [1/48.]*2, 1.0)
+    x = time * 60.0 * 60.0 * 24.0
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(3333.5296,rel=1e-2)
+
+    # Test the amplitude
+    fl_flux = aflare_decoupled(time, 1.734, [15]*2, 1.0)
+    assert np.max(fl_flux) == pytest.approx(1,rel=1e-2)
+
+    # repeat the tests for aflare but now with different gradual fwhm
+
+    n = 1000
+    time = np.arange(0, n/48, 1./48.)
+    x = time * 60.0 * 60.0 * 24.0
+
+    # Test a large flare without upsampling
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039, 3.4], 110.981950)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+
+    assert integral == pytest.approx(2.91e7,rel=1e-2)
+
+    # Test a flare with 0 amplitude
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039, 30.], 0)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == 0.
+
+    # test a large flare with upsampling
+    fl_flux = aflare_decoupled(time, 11.400134, [1.415039, 3.4], 110.981950, upsample=True)
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(2.91e7,rel=1e-2)
+
+    # Test a smaller undersampled flare
+    fl_flux = aflare_decoupled(time, 11.400134, [1/48.,1./20.], 1.0)
+    x = time * 60.0 * 60.0 * 24.0
+    integral = np.sum(np.diff(x) * fl_flux[:-1])
+    assert integral == pytest.approx(6076.2728,rel=1e-2)
+
+    # Test the amplitude
+    fl_flux = aflare_decoupled(time, 1.734, [15,71], 1.0)
+    assert np.max(fl_flux) == pytest.approx(1,rel=1e-2)
