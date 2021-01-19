@@ -50,6 +50,7 @@ class FlareModulator:
 
     def flare_template(self, params):
         if self.iscoupled == True:
+            # params = [ampl, tpeak, fwhm, (fwhm2)]
             return aflare(self.phi, params[1], params[2], params[0])
         elif self.iscoupled == False:
             return aflare_decoupled(self.phi, params[1], params[2:4], params[0])
