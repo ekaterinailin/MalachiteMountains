@@ -93,7 +93,7 @@ def script_2_rotational_broadening_and_CCF_plot(carms, salt, key, wavmin, wavmax
     # see ENIRIC docs: https://eniric.readthedocs.io/en/latest/broadening.html#rotational-broadening
 
     # # Pick vsini grid
-    vsinis = np.arange(33,38,.25)
+    vsinis = np.arange(33,42,.25)
 
 
     # # Set up the grid
@@ -102,7 +102,7 @@ def script_2_rotational_broadening_and_CCF_plot(carms, salt, key, wavmin, wavmax
 
     # # Run the broadening with ENIRIC
     for vsini in vsinis:
-        specs[vsini] = broaden.rotational_convolution(wav, model.lambd, model.flux, vsini, epsilon=0.75)
+        specs[vsini] = broaden.rotational_convolution(wav, model.lambd, model.flux, vsini, epsilon=0.6)
 
 
     # Path to save the grid
@@ -379,14 +379,15 @@ def script_3_ccf_and_vsini_fit(carms, salt, wavmin, wavmax):
                                                "level_0":"TIC", 
                                                "level_1":"template"})
 
-
+    tdr = f"{CWD}/data/summary/{tstamp}_vsinis.csv"
+    result.to_csv(tdr, index=False)
     # Merge results with the parameters table that 
     # is used elsewhere in the project
     # CALCULATE FINAL RESULT AND SAVE IT
     # ------------------------------------------------------------
 
     # Pick up parameters table
-    tabdir = f"{CWD}/data/summary/lcs.csv"
+    tabdir = f"{CWD}/data/summary/{tstamp}_lcs.csv"
     lcs = pd.read_csv(tabdir)
 
     print("\nMean vsini results:\n")
@@ -409,7 +410,7 @@ def script_3_ccf_and_vsini_fit(carms, salt, wavmin, wavmax):
         lcs.loc[lcs.ID == int(l[4:]),"e_vsini_kms"] = max(3., err)
 
     # Define a different output path to avoid overwriting with wrong results
-    tabdir2 = f"{CWD}/data/summary/lcsvsini.csv"
+    tabdir2 = f"{CWD}/data/summary/{tstamp}_lcsvsini.csv"
     lcs.to_csv(tabdir2, index=False)
     
     
