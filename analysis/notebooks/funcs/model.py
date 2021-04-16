@@ -98,6 +98,25 @@ class FlareModulator:
  
         val = -0.5 * np.sum((self.flux - model) ** 2 / fr2 + np.log(fr2))
         return val
+    
+    
+    def chi_square(self, params):
+        """structure of params:
+
+        index | value
+        -----------------------------------------------------------------------
+        0     | latitude
+        1     | longitude at t0
+        2     | inclination
+        3+    | (number of flares f1, f2, ...) x (number of parameters a,b,c...) 
+                as in [f1a, f1b, f1c, f2a, f2b, f2c]
+ 
+        """
+        theta, phi0, i =  params[:3]
+        flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
+        model = self.modulated_flux(theta, phi0, i, flareparams)
+        
+        return np.sum((self.flux - model) ** 2 / model)
 
 
     def log_prior(self, params, phi_a_min=(0,0.),

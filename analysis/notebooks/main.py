@@ -180,7 +180,7 @@ def run_mcmc(ID, tstamp, nflares, nars, Nsteps=50000, wiggle=1e-4):
 
         #map phi_a_distr to t0_distr:
         for i in [0,1]:
-            samples[:, i] = np.interp(samples[:,i],lc.phi,lc.t)
+            samples[:, i] = np.interp(samples[:,i], lc.phi, lc.t)
 
         # convert theta_f to degrees
         samples[:, 2] = samples[:, 2] / np.pi * 180.

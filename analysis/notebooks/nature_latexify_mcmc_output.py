@@ -97,12 +97,15 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
 if __name__ == "__main__":
     # Get results table that you want to convert:
     CWD = "/".join(os.getcwd().split("/")[:-2])
-    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/15_12_2020_GP_deprecated_mcmcoutput.csv")
+    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/15_12_2020_GP_mcmcoutput.csv")#_deprecated
     df = df.drop_duplicates(keep=False).fillna("")
     
     # Get properties, and add them to the table
     prop = pd.read_csv(f"{CWD}/data/summary/inclination_input.csv")
     prop['id'] = prop['id']#.astype(str) 
+    
+    # Get distance and Kmag, and add them to the table
+    obser = pd.read_csv(f"{CWD}/data/summary/lcs.csv")
     
     # get inclinations frm Elisabeth
     incl = pd.read_csv(f"{CWD}/data/inclinations/inclination_output.dat", delimiter=r"\s+")
@@ -110,6 +113,10 @@ if __name__ == "__main__":
     
     df = df.merge(prop, left_on="ID", right_on="id", how="left")
     df = df.merge(incl, left_on="ID", right_on="id", how="left")
+    df = df.merge(obser[["ID", "kmag", "e_kmag", 
+                         "dist_bailerjones_pc_50", 
+                         "dist_bailerjones_meanerr",]], # use instead of _16, _84 because the error is practically gaussian
+                  left_on="ID", right_on="ID", how="left")
     
     print(df.columns, df.shape, df.i_deg_16)
 
@@ -133,7 +140,8 @@ if __name__ == "__main__":
               ("i_deg","$i$ (deg)"),
               ("fwhm1_d", "FWHM$_i$ (min)"),
 	       ("fwhm2_d", "FWHM$_g$ (min)"),
-              ("latitude_deg", "$\theta_f$ (deg)")]
+              ("latitude_deg", "$\theta_f$ (deg)"),
+             ]
 
     # Do the conversion
     cp = df.copy(deep=True)
@@ -168,58 +176,40 @@ if __name__ == "__main__":
     cp[r"$P$ (min)"] = cp.apply(lambda x:
                                        fr"${x.prot_d * 24. *60.:.3f} \pm {x.e_prot_d * 24. *60.:.3f}$", axis=1)
     
-    #write inclination
-  #  cp[r"$i$ (deg)"] = cp.apply(lambda x: f"${x.inclination:.1f}\left(^{x.inclination_uperr:.1f}_{abs(x.inclination_lowerr):.1f}\right)$", axis=1)
-   # cp[r"$i$ (deg)"]  = cp[r"$i$ (deg)"].apply(lambda x: x.replace("^","^{+").replace("_","}_{-").replace("\right)","}\right)"))
-    del cp['inclination']
-    del cp['inclination_uperr']
-    del cp['inclination_lowerr']
+    # write rotation period to string
+    cp[r"$K_S$ (mag)"] = cp.apply(lambda x:
+                                       fr"${x.kmag:.3f} \pm {x.e_kmag:.3f}$", axis=1)
     
+    # write rotation period to string
+    cp[r"$d$ (pc)"] = cp.apply(lambda x:
+                                       fr"${x.dist_bailerjones_pc_50:.2f} \pm {x.dist_bailerjones_meanerr:.2f}$", axis=1)
+   
     # rename spt to SpT
     cp = cp.rename(index=str, columns={"spt":"SpT"})
     
-
-    
-    # Remove helper columns
-    del cp['tstamp']
-    del cp['color']
-    del cp['linestyle']
-    del cp['suffix']
-    del cp["ID"]
-    for _ in ['x', 'y']:
-        del cp[f'id_{_}']
-        del cp[f'prefix_{_}']
-
-    
-    # Drop columns
-    for i in ["","e_"]:
-        for j in ["prot_d", "rad_rsun", "vsini_kms"]:
-            cp = cp.drop(f"{i}{j}", axis=1)
 
     # Convert pandas to latex string
     df3 = cp.copy()
 
     # select columns
-    df3 = df3[["TIC","SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
+    df3 = df3[["TIC","SpT", "$K_S$ (mag)", "$d$ (pc)", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
                "$R_*/R_\odot$", r"$i$ (deg)","$\log_{10} E_{f}$ (erg)",
                r"$A$","FWHM$_i$ (min)","FWHM$_g$ (min)" ,"$\theta_f$ (deg)", ]]
 
-    columns = ["SpT", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
+    columns = ["SpT",  "$K_S$ (mag)", "$d$ (pc)", r"$P$ (min)", r"$v \sin i$ (km s$^{-1}$)", 
                "$R_*/R_\odot$", r"$i$ (deg)",
                "$\log_{10} E_{f,1}$ (erg)",r"$A_1$", "FWHM$_{i,1}$ (min)","FWHM$_{g,1}$ (min)" ,
                "$\log_{10} E_{f,2}$ (erg)",r"$A_2$", "FWHM$_{i,2}$ (min)","FWHM$_{g,2}$ (min)" ,
                 "$\theta_f$ (deg)", ]
     #df3 = df3[columns]
-    same = [1,2,3,4,5,10]
-    same_to = [0,1,2,3,4,13]
-    both = [6,7,8,9]
-    both_to = [5,9,6,10,7,11,8,12]
+    same = [1,2,3,4,5,6,7,12]
+    same_to = [0,1,2,3,4,5,6,15]
+    both = [8,9, 10, 11]
+    both_to = [7,11,8,12,9,13,10,14]
     
     df3 = get_multicolumntab(df3, "TIC", columns, both, both_to,same, same_to)
     df3 = df3.sort_values(by=r"$i$ (deg)", ascending=False, axis=1)
-   # nc = 'c' * (df3.shape[1]-2) #number of middle columns
-   # df3 = df3.set_index("TIC")
-   # df3 = df3.T
+
     footnote_pref= "\multicolumn{" + str(df3.shape[1]-2) + "}{l}" 
     footnote_suf = "\n"
 
@@ -233,7 +223,8 @@ if __name__ == "__main__":
     # Path to paper table directory
     PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft/nature"
     PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft/nature/multiperiodflaresnature/tables"
+    PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft-mnras/tables"
 
     # Write out latex string
-    with open(f"{PWD}/nature_results_decoupled_GP_deprecated.tex", "w") as f:
+    with open(f"{PWD}/mnras_results_decoupled_GP.tex", "w") as f:#_deprecated
         f.write(stri)
