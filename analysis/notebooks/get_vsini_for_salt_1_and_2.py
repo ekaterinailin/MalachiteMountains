@@ -198,8 +198,11 @@ def script_2_rotational_broadening_and_CCF_plot(carms, salt, key, wavmin, wavmax
         # Convert CCF lag to velocity
         v = get_lags(cc1)*lagunit
 
-        # Plot the CCF
-        plt.plot(v, cc1/np.max(cc1), label=f"{lab}", c=c)
+        # Center on 0 km/s and plot the CCF
+        ccf_ = cc1/np.max(cc1)
+        maxarg = np.argmax(ccf_)
+        v_ = v - v[maxarg]
+        plt.plot(v_, ccf_, label=f"{lab}", c=c)
 
         # Save to the CCF frame
         corrsp[lab] = cc1

@@ -60,7 +60,7 @@ if __name__ == "__main__":
     for l, target in lcs.iterrows():
        # print(target)
         # Get inclinations
-        i_mu, i_sigma, sini, esini= calculate_inclination(target)
+        i_mu, i_sigma, sini, esini = calculate_inclination(target)
 
         # Plot result as sini and i
         x = np.linspace(0, 1, 200)
