@@ -64,7 +64,6 @@ class FlareModulator:
         for params in flareparams:
 
             radius = calculate_angular_radius(self.Fth, params[0], self.qlum, self.R) # the amplitude is the real one observed from the front
-         
             flare = self.flare_template(params)
       
             if radius<10: #deg
