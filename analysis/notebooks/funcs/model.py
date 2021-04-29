@@ -77,7 +77,7 @@ class FlareModulator:
         # sum contributions from each flare and add the median flux
         return sum(ms, self.median)
 
-    def log_likelihood(self, params):
+    def log_likelihood(self, params, sta=0, sto=None):
         """structure of params:
 
         index | value
@@ -93,13 +93,13 @@ class FlareModulator:
         flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
         model = self.modulated_flux(theta, phi0, i, flareparams)
 
-        fr2 = self.flux_err**2
+        fr2 = self.flux_err[sta:sto]**2
  
-        val = -0.5 * np.sum((self.flux - model) ** 2 / fr2 + np.log(fr2))
+        val = -0.5 * np.sum((self.flux[sta:sto] - model[sta:sto]) ** 2 / fr2 + np.log(fr2))
         return val
     
     
-    def chi_square(self, params):
+    def chi_square(self, params, sta=0, sto=None):
         """structure of params:
 
         index | value
@@ -115,7 +115,7 @@ class FlareModulator:
         flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
         model = self.modulated_flux(theta, phi0, i, flareparams)
         
-        return np.sum((self.flux - model) ** 2 / model)
+        return np.sum((self.flux[sta:sto] - model[sta:sto]) ** 2 / model[sta:sto])
 
 
     def log_prior(self, params, phi_a_min=(0,0.),
