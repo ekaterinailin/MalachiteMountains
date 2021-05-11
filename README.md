@@ -1,5 +1,7 @@
 ![Malachite Mountains](mm_hl.png)
 
+_logo design: Elizaveta Ilin (2021)_
+
 # MalachiteMountains
 
 This repository contains the necessary data, model code and scripts to reproduce the results, figures, and tables that appear in Ilin et al. (submitted to MNRAS).
