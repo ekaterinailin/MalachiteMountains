@@ -1,3 +1,5 @@
+![Malachite Mountains](mm_hl.png)
+
 # MalachiteMountains
 
 This repository contains the necessary data, model code and scripts to reproduce the results, figures, and tables that appear in Ilin et al. (to be submitted).
