@@ -1,3 +1,20 @@
+"""
+UTF-8, Python 3
+
+------------------
+MalachiteMountains
+------------------
+
+Ekaterina Ilin, 2020, MIT License
+
+
+This module contains the FlareModulator model.
+The model takes flare parameters, and stellar parameters
+as input and produces a rotationally modulated flare light curve.
+
+"""
+
+
 import numpy as np
 import pandas as pd
 
@@ -7,7 +24,7 @@ from .flarefit import (uninformative_prior,
                        calculate_posterior_value_that_can_be_passed_to_mcmc)
 
 import astropy.units as u
-from astropy.constants import c, h, k_B, R_sun, L_sun
+from astropy.constants import c, h, k_B
 
 from scipy.stats import binned_statistic
 
@@ -62,8 +79,8 @@ class FlareModulator:
     flaret : float
         The flare temperature in K.
     """
-    def __init__(self, phi, flux, flux_err, qlum, R,
-                 median, nflares, iscoupled, num_pts=100,
+    def __init__(self, phi, qlum, R, flux=None, flux_err=None,
+                 median=1., nflares=1, iscoupled=True, num_pts=100,
                  mission="TESS", flaret=1e4):
         
         self.phi = phi
@@ -100,7 +117,13 @@ class FlareModulator:
             return aflare_decoupled(self.phi, params[1], params[2:4], params[0])
 
     def modulated_flux(self, theta, phi0, i, flareparams):
+        """Method to create a modulated flux array based on the flare parameters.
         
+        Parameters:
+        -----------
+        theta : flare latitude
+        
+        """
 
         ms = [] # list of flares
 
@@ -137,6 +160,8 @@ class FlareModulator:
 
 
         Parameters
+        ----------
+
 
         Structure of params:
 

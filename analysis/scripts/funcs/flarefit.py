@@ -10,8 +10,10 @@ import copy
 # I do test the underlying functions like gaussian_prior etc.
 
 def logit(function):
-    '''Make a probability distribution
-    a log probability distribution.'''
+    '''Make a probability distribution (i.e., function)
+    a log probability distribution.
+    
+    '''
     def wrapper(*args, **kwargs):
         result = function(*args, **kwargs)
         np.seterr(divide='ignore') # ignore division by zero because you want to have the -np.inf results
@@ -45,7 +47,6 @@ def uninformative_prior(rate, minrate, maxrate):
 
 
 
-
 def calculate_posterior_value_that_can_be_passed_to_mcmc(lp):
     '''Do some checks to make sure MCMC will work.'''
     if not np.isfinite(lp):
@@ -65,7 +66,8 @@ def empirical_prior(x, g):
     ------------
     x : N-array
         latitude between -pi/2 and pi/2
-    g : astropy compound model
+    g : astropy compound model 
+        inclination prior
     '''
     if ((x > np.pi/2) | (x < 0)):
         return 0
@@ -91,6 +93,8 @@ def convert_posterior_units(res, prot, phi, time):
         results from MCMC sampling 
     prot : float
         rotation period in days
+    phi : 
+
     """
     r = copy.deepcopy(res)
     

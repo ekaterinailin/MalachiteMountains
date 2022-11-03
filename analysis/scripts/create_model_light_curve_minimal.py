@@ -9,19 +9,19 @@ Ekaterina Ilin, 2020, MIT License
 
 
 This simple script creates a model light curve of a
-flare that is geometrically modulated by stellar rotation,
- and shows a plot.
+flare that is geometrically modulated by stellar rotation, 
+and shows a plot.
 
-The flare shape is empirical from Davenport et al. (2014)
+The flare shape is empirical from Davenport et al. (2014).
 """
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 from astropy.constants import R_sun
 import astropy.units as u
 
-import numpy as np
-
-from funcs.model import full_model, calculate_specific_flare_flux, aflare
+from funcs.model import FlareModulator, calculate_specific_flare_flux, aflare
 
 
 if __name__ == "__main__":
@@ -50,8 +50,11 @@ if __name__ == "__main__":
     # FLARE PARAMETERS
     #------------------------
 
-    # Specific flare flux 
-    Fth = calculate_specific_flare_flux("TESS", flaret=1e4)
+    # what wavelength band are we using? TESS or Kepler
+    mission = "TESS"
+
+    # what temperature does the flare have in K
+    flaret = 1e4
 
     # Flare latitude in rad
     theta_a = 35*np.pi/180
@@ -69,7 +72,7 @@ if __name__ == "__main__":
     i = 45 * np.pi / 180
 
     # Stellar luminosity
-    qlum = 1e28 * u.erg/u.s
+    qlum = 1e28 * u.erg / u.s
 
     # Stellar radius
     R = .15 * R_sun
@@ -79,15 +82,17 @@ if __name__ == "__main__":
     #------------------------
 
     # modulated flux
-    m = full_model(phi_a, theta_a, a, fwhm, i, phi0=phi0,
-                  phi=phi, num_pts=50, qlum=qlum,
-                  Fth=Fth, R=R, median=median)
+    modulator = FlareModulator(phi, qlum, R, median=median,
+                               mission=mission, flaret=flaret)
+
+    flareparams = [(a, phi_a, fwhm)]
+    modulated_flare = modulator.modulated_flux(theta_a, phi0, i, flareparams)
 
     # underlying flare
-    flare = aflare(phi, phi_a, fwhm, a*median,)
+    flare = aflare(phi, phi_a, fwhm, a*median)
 
     # Create a figure that shows a typical LC
-    flux = m + np.random.rand(N) * 10.
+    flux = modulated_flare + np.random.rand(N) * 10.
     flux_err = np.full(N, 5.)
 
     plt.figure(figsize=(7,5))
@@ -96,4 +101,4 @@ if __name__ == "__main__":
     plt.xlabel("time")
     plt.ylabel("flux")
     plt.show()
-    #plt.savefig("model_lc.png")
+    plt.savefig("model_lc.png")

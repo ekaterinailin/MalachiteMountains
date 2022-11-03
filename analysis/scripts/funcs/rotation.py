@@ -9,7 +9,7 @@ Ekaterina Ilin, 2020, MIT License
 
 
 This module contains functions used to 
-calculate and fit rotation periods.
+calculate and fit rotation periods to lightcurves.
 
 We are only testing find_period, the rest are
 scripts we call in the notebooks.
@@ -35,11 +35,6 @@ import time as Timestamp
 # data management    
 import os
 import copy
-
-
-
-
-
 
 CWD = os.getcwd()
 

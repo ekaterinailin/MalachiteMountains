@@ -1,18 +1,9 @@
-import warnings
+""""""
 
-import pandas as pd
 import numpy as np
-
-from astropy.io import fits
-from astropy.constants import R_sun
-import astropy.units as u
-
-from altaipony.flarelc import FlareLightCurve
 from altaipony.lcio import from_mast
-
-import sys
-
 import os
+
 CWD = "/".join(os.getcwd().split("/")[:-3]) + "/data/lcs"
 
 
