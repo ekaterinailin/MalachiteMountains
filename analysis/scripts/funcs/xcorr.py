@@ -4,6 +4,8 @@ Normalized cross-correlation or cross-correlation with specified maximum lag
 
 This code is published in a similar version in ObsPy's
 cross-correlation module (v1.1.0).
+
+THIS IS ONLY NEEDED IF WE NEED TO WORK WITH SPECTRA TO GET VSINI
 """
 
 import numpy as np
