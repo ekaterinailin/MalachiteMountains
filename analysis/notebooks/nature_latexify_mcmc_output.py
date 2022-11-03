@@ -97,7 +97,7 @@ def add_val_with_percentiles(df, val, out, suff = ["_16","_50","_84"]):
 if __name__ == "__main__":
     # Get results table that you want to convert:
     CWD = "/".join(os.getcwd().split("/")[:-2])
-    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/15_12_2020_GP_mcmcoutput.csv")#_deprecated
+    df = pd.read_csv(f"{CWD}/analysis/results/mcmc/15_12_2020_GP_deprecated_mcmcoutput.csv")#
     df = df.drop_duplicates(keep=False).fillna("")
     
     # Get properties, and add them to the table
@@ -125,8 +125,8 @@ if __name__ == "__main__":
 
 #        df = df.drop(f"rad_rsun{i}", axis=1)
         df[f"Eflare_erg{i}"] = np.log10(df[f"Eflare_erg{i}"])
-        df[f"fwhm1_d{i}"] = df[f"fwhm1_d{i}"] * 60.
-        df[f"fwhm2_d{i}"] = df[f"fwhm2_d{i}"] * 60.
+        df[f"fwhm1_d{i}"] = df[f"fwhm1_d{i}"] * 24. * 60.
+        df[f"fwhm2_d{i}"] = df[f"fwhm2_d{i}"] * 24. * 60.
         #df = df.drop(f"i_deg{i}", axis=1)
     
     # What values do you want to convert and how to call them                                
@@ -226,5 +226,5 @@ if __name__ == "__main__":
     PWD = "/home/ekaterina/Documents/002_writing/multiperiod-flares-draft-mnras/tables"
 
     # Write out latex string
-    with open(f"{PWD}/mnras_results_decoupled_GP.tex", "w") as f:#_deprecated
+    with open(f"{PWD}/mnras_results_decoupled_GP_deprecated2.tex", "w") as f:#
         f.write(stri)
