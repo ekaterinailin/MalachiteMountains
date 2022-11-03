@@ -10,6 +10,15 @@ The name of this repository refers to Russian folklore, a fairy tale about the [
 
 ## Relevant contents of this repository
 
+
+### master branch
+
+Bare bones package only, updated to be more modular, using classes.
+
+### ilin2021 branch
+
+This branch contains the necessary data, model code and scripts to reproduce the results, figures, and tables that appear in [Ilin et al. (2021)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.507.1723I/abstract)
+
 - data/
   - inclinations/
     - *post_compound.p
@@ -33,8 +42,4 @@ The name of this repository refers to Russian folklore, a fairy tale about the [
     - *.py
         - some pure python scripts
     
-## Plans
 
-
-- Make all the notebooks work with the refactored FlareModulator class and its outputs.
-- Branch out a version that contains the packaged model only.
