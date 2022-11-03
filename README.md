@@ -4,8 +4,6 @@ _logo design: Elizaveta Ilin (2021)_
 
 # MalachiteMountains
 
-This repository contains the necessary data, model code and scripts to reproduce the results, figures, and tables that appear in Ilin et al. (submitted to MNRAS).
-
 The name of this repository refers to Russian folklore, a fairy tale about the [Malachite Casket](https://en.wikipedia.org/wiki/The_Malachite_Casket_(fairy_tale)).
 
 ## Relevant contents of this repository
