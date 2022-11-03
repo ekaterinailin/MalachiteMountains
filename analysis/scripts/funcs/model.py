@@ -33,9 +33,39 @@ PHI, THETA = create_spherical_grid(int(1e4)) #lat, lon
 
 
 class FlareModulator:
+    """Class to calculate the flare light curve as it is modulated by stellar rotation.
+
+    Attributes
+    ----------
+    phi : array-like
+        The time array of the light curve in longitudinal angles
+    flux : array-like
+        The flux array of the light curve.
+    flux_err : array-like
+        The flux error array of the light curve.
+    qlum : float
+        The bolometric luminosity of the star.
+    R : float   
+        The radius of the star.
+    median : float
+        The median flux of the light curve.
+    num_pts : int
+        The number of points to use for the grid on the stellar surface.
+    Fth : float
+        Specific flare flux, depending on mission.
+    nflares : int
+        Number of flares in the light curve.
+    iscoupled : bool
+        Whether the flares have coupled rise and decay phases or not or not.
+    mission : str
+        The mission the light curve is from. Kepler or TESS.
+    flaret : float
+        The flare temperature in K.
+    """
     def __init__(self, phi, flux, flux_err, qlum, R,
                  median, nflares, iscoupled, num_pts=100,
                  mission="TESS", flaret=1e4):
+        
         self.phi = phi
         self.flux = flux
         self.flux_err = flux_err
@@ -43,12 +73,26 @@ class FlareModulator:
         self.R = R
         self.median = median
         self.num_pts = num_pts
+
         self.Fth = calculate_specific_flare_flux(mission, flaret=flaret)
 
         self.nflares = nflares
         self.iscoupled = iscoupled
 
     def flare_template(self, params):
+        """
+        Picks a flare tmeplate based whether the flares' rise and 
+        decay phase are coupled or not. If it is coupled, only
+        one FWHM is used. If it is not coupled, two FWHM are used, 
+        one for the rise and one for the decay phase.
+        
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the flare.
+
+        """
+    
         if self.iscoupled == True:
             # params = [ampl, tpeak, fwhm, (fwhm2)]
             return aflare(self.phi, params[1], params[2], params[0])
@@ -62,15 +106,24 @@ class FlareModulator:
 
         # model each flare
         for params in flareparams:
+            # calculate the angular radius of the flare based on its amplitude, 
+            # specific flare flux, stellar luminosity and radius
+            # (the amplitude is the real one observed from the front)
+            radius = calculate_angular_radius(self.Fth, params[0], self.qlum, self.R) 
 
-            radius = calculate_angular_radius(self.Fth, params[0], self.qlum, self.R) # the amplitude is the real one observed from the front
+            # get a flare template, either with coupled or decoupled FWHM
             flare = self.flare_template(params)
       
-            if radius<10: #deg
+            # calculate the latitudes and longitudes of a flaring spot grid
+            # if the radius is relatively small, use a circular approximation
+            if radius < 10: #deg
                 latitudes, longitudes, pos = dot_ensemble_circular(theta, 0, radius, num_pts=self.num_pts)
+
+            # for a big spot, use a cap on the sphere approximation
             else:
                 latitudes, longitudes = dot_ensemble_spherical(theta, 0, radius)
 
+            # apply the flare model model to each grid point at each time of the light curve 
             lamb, onoff, m = lightcurve_model(self.phi, latitudes, longitudes, flare, i, phi0=phi0)
             ms.append(m * self.median)
         
@@ -78,7 +131,14 @@ class FlareModulator:
         return sum(ms, self.median)
 
     def log_likelihood(self, params, sta=0, sto=None):
-        """structure of params:
+        """
+        Calculate the log of the likelihood function of the model with
+        given parameters.
+
+
+        Parameters
+
+        Structure of params:
 
         index | value
         -----------------------------------------------------------------------
