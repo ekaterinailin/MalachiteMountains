@@ -121,8 +121,21 @@ class FlareModulator:
         
         Parameters:
         -----------
-        theta : flare latitude
-        
+        theta : float
+            flare latitude
+        phi0 : float
+            flare longitude at t0
+        i : float
+            stellar inclination
+        flareparams : list of tuples
+            The parameters of the flares. Each tuple contains the flare parameters
+            for one flare. The parameters are: (amplitude, tpeak, fwhm, (fwhm2))
+            FWHM2 is needed, if the flares have decoupled rise and decay phases.
+
+        Returns:
+        --------
+        modulated_flux : array-like
+            The modulated flux array.
         """
 
         ms = [] # list of flares
@@ -161,7 +174,10 @@ class FlareModulator:
 
         Parameters
         ----------
-
+        params : array-like
+            The parameters of the model. The first element is the latitude of the flare,
+            the second element is the longitude of the flare at t0, the third element is
+            the inclination of the star, the rest of the elements are the flare parameters
 
         Structure of params:
 
@@ -173,15 +189,28 @@ class FlareModulator:
         3+    | (number of flares f1, f2, ...) x (number of parameters a,b,c...) 
                 as in [f1a, f1b, f1c, f2a, f2b, f2c]
  
+        Returns
+        -------
+        logL : float
+            The log of the likelihood function.
+
         """
+        # extract the model parameters that are valid for all flares
         theta, phi0, i =  params[:3]
+
+        # extract the flare parameters
         flareparams = np.array(params[3:]).reshape(self.nflares, len(params[3:])//self.nflares)
+        
+        # calculate the rotationally modulated flux
         model = self.modulated_flux(theta, phi0, i, flareparams)
 
+        # calculate the square of the uncertainties
         fr2 = self.flux_err[sta:sto]**2
- 
-        val = -0.5 * np.sum((self.flux[sta:sto] - model[sta:sto]) ** 2 / fr2 + np.log(fr2))
-        return val
+
+        # calculate the log of the likelihood function
+        logL = -0.5 * np.sum((self.flux[sta:sto] - model[sta:sto]) ** 2 / fr2 + np.log(fr2))
+        
+        return logL
     
     
     def chi_square(self, params, sta=0, sto=None):

@@ -1,7 +1,6 @@
-# Everything I need to fit the flare ligh curves to the model,
+# Everything I need to fit the flare light curves to the model,
 # sampling from the posterior distribution using MCMC.
 
-from scipy import optimize
 import numpy as np
 
 import copy
